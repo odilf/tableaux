@@ -1,21 +1,80 @@
-use crate::core::SplitResult;
-use std::{fmt, ops::Deref};
+use std::fmt;
+use std::str::FromStr;
 
-#[derive(Debug, Clone)]
-pub enum Predicate {
-    Atom(String),
-    Not(Box<Self>),
-    And(Box<Self>, Box<Self>),
-    Or(Box<Self>, Box<Self>),
-    MaterialImplication(Box<Self>, Box<Self>),
+use crate::Logic;
+use crate::logic::InferenceRule;
+use crate::tableau::Branch;
+
+pub struct Classical {}
+
+impl Logic for Classical {
+    type Node = Expr;
+    type Expr = Expr;
+
+    fn infer(branch: Branch<Self>) -> InferenceRule<Self::Node> {
+        use InferenceRule as IR;
+        match branch.leaf() {
+            Expr::Const(_) => IR::None,
+            Expr::Not(p) => match p.as_ref() {
+                Expr::Const(_) => IR::none(),
+                Expr::Not(_) => IR::single(*p.clone()),
+                Expr::And(p, q) => IR::split(p.not(), q.not()),
+                Expr::Or(p, q) => IR::chain(vec![p.not(), q.not()]),
+                Expr::MatImpl(p, q) => IR::chain(vec![*p.clone(), q.not()]),
+                Expr::MatEquiv(p, q) => {
+                    IR::split_and_chain([p.not(), *q.clone()], [*p.clone(), q.not()])
+                }
+            },
+            Expr::And(p, q) => IR::chain(vec![*p.clone(), *q.clone()]),
+            Expr::Or(p, q) => IR::split(*p.clone(), *q.clone()),
+            Expr::MatImpl(p, q) => IR::split(p.not(), *q.clone()),
+            Expr::MatEquiv(p, q) => {
+                IR::split_and_chain([*p.clone(), *q.clone()], [p.not(), q.not()])
+            }
+        }
+    }
+
+    fn has_contradiction(branch: Branch<Self>) -> bool {
+        let Some((name, value)) = branch.leaf().interpretation() else {
+            return false;
+        };
+
+        branch
+            .ancestors()
+            .filter_map(|ancestor| ancestor.interpretation())
+            .any(|(other_name, other_value)| other_name == name && other_value != value)
+    }
+
+    fn make_premise_node(expr: Self::Expr) -> Self::Node {
+        expr
+    }
+
+    fn make_conclusion_node(expr: Self::Expr) -> Self::Node {
+        Expr::Not(Box::new(expr))
+    }
 }
 
-impl Predicate {
-    fn terminal_value(&self) -> Option<(bool, &str)> {
+#[derive(Debug, Clone)]
+pub enum Expr {
+    // TODO: Use some kind of small string type
+    Const(Box<str>),
+    Not(Box<Expr>),
+    And(Box<Expr>, Box<Expr>),
+    Or(Box<Expr>, Box<Expr>),
+    MatImpl(Box<Expr>, Box<Expr>),
+    MatEquiv(Box<Expr>, Box<Expr>),
+}
+
+impl Expr {
+    fn not(self: &Box<Expr>) -> Expr {
+        Expr::Not(self.clone())
+    }
+
+    fn interpretation(&self) -> Option<(&str, bool)> {
         match self {
-            Self::Atom(name) => Some((true, name)),
-            Self::Not(atom) => match atom.deref() {
-                Self::Atom(name) => Some((false, name)),
+            Self::Const(name) => Some((name, true)),
+            Self::Not(p) => match p.as_ref() {
+                Self::Const(name) => Some((name, false)),
                 _ => None,
             },
             _ => None,
@@ -23,97 +82,66 @@ impl Predicate {
     }
 }
 
-impl fmt::Display for Predicate {
+impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Atom(name) => f.write_str(&name),
-            Self::Not(p) => write!(f, "(¬{p})"),
+            Self::Const(name) => f.write_str(&name),
+            Self::Not(p) => write!(f, "¬{p}"),
             Self::And(x, y) => write!(f, "({x} ∧ {y})"),
             Self::Or(x, y) => write!(f, "({x} ∨ {y})"),
-            Self::MaterialImplication(x, y) => write!(f, "({x} ⊃ {y})"),
+            Self::MatImpl(x, y) => write!(f, "({x} ⊃ {y})"),
+            Self::MatEquiv(x, y) => write!(f, "({x} ≡ {y})"),
         }
     }
 }
 
-impl crate::core::Predicate for Predicate {
-    fn negated(self) -> Self {
-        Self::Not(Box::new(self))
-    }
+#[cfg(feature = "parse")]
+impl FromStr for Expr {
+    // TODO: It would be really nice to just return the proper error :/
+    type Err = String;
 
-    fn split(&self) -> SplitResult<Self> {
-        match self {
-            Self::MaterialImplication(a, b) => {
-                SplitResult::Disjunction([Self::Not(a.clone()), *b.clone()])
-            }
-            Self::Not(p) => match p.deref() {
-                Self::MaterialImplication(a, b) => {
-                    SplitResult::Conjunction([*a.clone(), Self::Not(b.clone())])
-                }
-                Self::Atom(_) => SplitResult::Terminal,
-                _ => todo!("TODO: {self}"),
-            },
-            Self::Atom(_) => SplitResult::Terminal,
-            _ => todo!(),
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use winnow::{
+            ModalResult, Parser,
+            ascii::space0,
+            combinator::alt,
+            combinator::{delimited, preceded},
+            seq,
+            token::take_while,
+        };
+
+        fn ident<'a>(input: &mut &'a str) -> ModalResult<&'a str> {
+            let tokens = ['¬', '∨', '∧', '⊃', '≡', '(', ')', ' '];
+
+            let is_ident = |char| !tokens.contains(&char);
+            take_while(1.., is_ident).parse_next(input)
         }
-    }
 
-    fn is_terminal(&self) -> bool {
-        matches!(self, Self::Not(p) if matches!(p.deref(), Self::Atom(_)))
-            || matches!(self, Self::Atom(_))
-    }
+        fn expr_single<'a>(input: &mut &'a str) -> ModalResult<Expr> {
+            let main = alt((
+                delimited('(', expr, ')'),
+                ident.map(|name: &str| Expr::Const(name.to_string().into_boxed_str())),
+                preceded('¬', expr).map(|expr| Expr::Not(Box::new(expr))),
+            ));
 
-    fn contradicts<'a>(&self, mut ancestors: impl Iterator<Item = &'a Self>) -> Option<String>
-    where
-        Self: 'a,
-    {
-        let (boolean, name) = self.terminal_value().unwrap();
-        ancestors.find_map(|other| {
-            let (other_bool, other_name) = other.terminal_value()?;
-            (other_name == name && other_bool != boolean).then(|| name.to_string())
-        })
+            delimited(space0, main, space0).parse_next(input)
+        }
+
+        fn expr<'a>(input: &mut &'a str) -> ModalResult<Expr> {
+            let main = alt((
+                seq!(expr_single, '∧', expr).map(|(a, _, b)| Expr::And(Box::new(a), Box::new(b))),
+                seq!(expr_single, '∨', expr).map(|(a, _, b)| Expr::Or(Box::new(a), Box::new(b))),
+                seq!(expr_single, '⊃', expr)
+                    .map(|(a, _, b)| Expr::MatImpl(Box::new(a), Box::new(b))),
+                seq!(expr_single, '≡', expr)
+                    .map(|(a, _, b)| Expr::MatEquiv(Box::new(a), Box::new(b))),
+                expr_single,
+            ));
+
+            delimited(space0, main, space0).parse_next(input)
+        }
+
+        // TODO: It would be really nice to just return the proper error :/
+        expr.parse(s).map_err(|err| err.to_string())
     }
 }
-
-#[macro_export]
-macro_rules! p {
-    (($x:tt then $y:tt)) => {
-        Predicate::MaterialImplication(Box::new(p!($x)), Box::new(p!($y)))
-    };
-
-    (($atom:literal)) => {
-        Predicate::Atom($atom.into())
-    };
-
-    ($($expr:tt)*) => {
-        p!(($($expr)*))
-    };
-}
-
-pub use p;
-
-// #[cfg(test)]
-// mod tests {
-//     use crate::core::Tableux;
-
-//     use super::Predicate;
-
-//     fn material_implication_transitivity() {
-//         let premises = [p!("A" then "B"), p!("B" then "C")];
-//         let conclusion = p!("A" then "C");
-
-//         // let a = Predicate::Atom("A".into());
-//         // let b = Predicate::Atom("B".into());
-//         // let c = Predicate::Atom("C".into());
-//         // let premises = [
-//         //     Predicate::MaterialImplication(Box::new(a), Box::new(b)),
-//         //     Predicate::MaterialImplication(Box::new(b), Box::new(c)),
-//         // ];
-
-//         // let conclusion = Predicate::MaterialImplication(Box::new(a), Box::new(c));
-
-//         let tableux = Tableux::new(premises, conclusion);
-//         println!("{tableux}");
-//         let tableux = tableux.infer();
-//         println!("{tableux}")
-//     }
-// }

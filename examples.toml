@@ -1,0 +1,27 @@
+[[example]]
+type = "classical"
+statements = ["p ⊃ q, q ⊃ r ⊢ p ⊃ r"]
+result = "holds"
+name = "Transitivity"
+desc = "Classical logic implies transitivity of material implication"
+
+[[example]]
+name = "Characteristic reflexive-modal equation"
+statements = [
+  { type = "modal",   statement = "◻p ⊢ p", result = "not-holds" },
+  { type = "modal-ρ", statement = "◻p ⊢ p", result = "holds" }
+]
+
+[[example]]
+name = "Characteristic symmetric-modal equation"
+statements = [
+  { type = "modal",   statement = "p ⊢ ◻⋄p", result = "not-holds" },
+  { type = "modal-τ", statement = "p ⊢ ◻⋄p", result = "holds" }
+]
+
+[[example]]
+name = "Characteristic transitive-modal equation"
+statements = [
+  { type = "modal",   statement = "◻p ⊢ ◻◻p", result = "not-holds" },
+  { type = "modal-τ", statement = "◻p ⊢ ◻◻p", result = "holds" }
+]

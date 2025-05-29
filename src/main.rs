@@ -1,23 +1,18 @@
-use tableux::{
-    classical::{Predicate, p},
-    core::Tableux,
-};
+use std::error::Error;
 
-fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt::init();
+use tableaux::logic;
 
-    let premises = [p!("A" then "B"), p!("B" then "C")];
-    let conclusion = p!("A" then "C");
+fn main() -> Result<(), Box<dyn Error>> {
+    // let tableau = logic::modal::infer("◻p ⊢ p");
+    // let tableau = logic::modal::infer("p ⊢ ◻⋄p");
+    // let tableau = logic::modal::infer("◻p ⊢ ⋄p");
+    let tableau = logic::modal::infer("p ⊃ q, q ≡ p ⊢ q ⊃ p");
 
-    let mut tableux = Tableux::new(premises, conclusion);
-    println!("{tableux}");
-    println!("START\n\n");
-    while let Ok(()) = tableux.expand_first() {
-        println!("{tableux}");
-    }
-    println!("{tableux}");
+    // let tableau = logic::classical::infer("p ⊃ q, q ⊃ r ⊢ p ⊃ r");
+    // let tableau = logic::classical::infer("a ≡ b ⊢ b ≡ a");
 
-    println!("{:?}", tableux.holds());
+    println!("{tableau}");
+    assert!(tableau.holds());
 
     Ok(())
 }
