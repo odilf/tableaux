@@ -1,14 +1,16 @@
 use core::fmt;
-use std::{error::Error, str::FromStr};
+use std::{cmp, collections::BinaryHeap, error::Error, str::FromStr};
 
 use crate::Logic;
 
 #[derive(Debug, Clone)]
 pub struct PartialTableau<L: Logic> {
+    /// The underlying logic system of the tableau.
+    pub logic: L,
     nodes: Vec<TableauNode<L::Node>>,
     root: NodeId,
-    // TODO: Change into binary heap.
-    uninferred_nodes: Vec<NodeId>,
+    /// Non-terminal nodes that need to be expanded.
+    uninferred_nodes: BinaryHeap<NodeIdPriority>,
 }
 
 #[derive(Debug, Clone)]
@@ -22,26 +24,35 @@ pub struct TableauNode<V> {
     death_reason: Option<()>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NodeId {
     index: u16,
 }
 
+/// A [`NodeId`] that has some priority, used
+/// to choose what node to infer first.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NodeIdPriority {
+    node_id: NodeId,
+    priority: u16,
+}
+
 impl<L: Logic> PartialTableau<L> {
     /// Contructs a new [`PartialTableau`] with the given premises and conclusion.
-    pub fn new(premises: impl IntoIterator<Item = L::Expr>, conclusion: L::Expr) -> Self {
+    pub fn new(logic: L, premises: impl IntoIterator<Item = L::Expr>, conclusion: L::Expr) -> Self {
         let premises = premises.into_iter();
         let mut tableau = PartialTableau {
+            logic,
             nodes: Vec::with_capacity(premises.size_hint().0 + 1),
             root: NodeId { index: 0 },
-            uninferred_nodes: Vec::with_capacity(premises.size_hint().0 + 1),
+            uninferred_nodes: BinaryHeap::with_capacity(premises.size_hint().0 + 1),
         };
 
         for premise in premises {
-            tableau.add_orphan(L::make_premise_node(premise));
+            tableau.add_orphan(tableau.logic.make_premise_node(premise));
         }
 
-        tableau.add_orphan(L::make_conclusion_node(conclusion));
+        tableau.add_orphan(tableau.logic.make_conclusion_node(conclusion));
 
         for i in 0..tableau.nodes.len() - 1 {
             tableau.bind_child(
@@ -59,10 +70,11 @@ impl<L: Logic> PartialTableau<L> {
 impl<L: Logic> Tableau<L> {
     /// Same as [`PartialTableau::new`]
     pub fn new(
+        logic: L,
         premises: impl IntoIterator<Item = L::Expr>,
         conclusion: L::Expr,
     ) -> PartialTableau<L> {
-        PartialTableau::new(premises, conclusion)
+        PartialTableau::new(logic, premises, conclusion)
     }
 }
 
@@ -103,14 +115,16 @@ impl<L: Logic> PartialTableau<L> {
     }
 
     fn infer_once(&mut self) -> Option<()> {
-        let node_id = self.uninferred_nodes.pop()?;
+        let node_id = self.uninferred_nodes.pop()?.node_id;
         let branch = self.branch(node_id);
 
         let initial_node_len = self.nodes.len();
-        // NOTE: In all cases, we have to check branch liveness at the end in splits because we need to add both before killing other branches,
-        // but we need to check on the loop in chains to make sure we don't expand extra nodes if it's dead.
+        // NOTE: In all cases, we have to check branch liveness at the end in
+        // splits because we need to add both before killing other branches,
+        // but we need to check on the loop in chains to make sure we don't
+        // expand extra nodes if it's dead.
         use crate::logic::InferenceRule as IR;
-        match L::infer(branch) {
+        match self.logic.infer(branch) {
             IR::None => (),
             IR::Single(p) => {
                 for leaf in self.live_leaves() {
@@ -169,8 +183,9 @@ impl<L: Logic> PartialTableau<L> {
             }
         };
 
-        // NOTE: This depends on the implementation of `Self::add_orphan`. Thankfully it's pretty logical but just watch out if
-        // that tries to be optimized.
+        // NOTE: This depends on the implementation of `Self::add_orphan`.
+        // Thankfully it's pretty logical but just watch out if that tries to
+        // be optimized.
         for i in initial_node_len..self.nodes.len() {
             let node_id = NodeId { index: i as u16 };
             self.propagate_branch_liveness(node_id);
@@ -180,7 +195,7 @@ impl<L: Logic> PartialTableau<L> {
     }
 
     fn check_branch_liveness(&mut self, leaf: NodeId) -> bool {
-        if L::has_contradiction(self.branch(leaf)) {
+        if self.logic.has_contradiction(self.branch(leaf)) {
             self.get_mut(leaf).death_reason = Some(());
             true
         } else {
@@ -240,6 +255,7 @@ impl<L: Logic> PartialTableau<L> {
     }
 
     fn add_orphan(&mut self, node_value: L::Node) -> NodeId {
+        let priority = self.logic.priority(&node_value);
         let node = TableauNode {
             value: node_value,
             parent: None,
@@ -252,7 +268,8 @@ impl<L: Logic> PartialTableau<L> {
             index: self.nodes.len() as u16,
         };
         self.nodes.push(node);
-        self.uninferred_nodes.push(node_id);
+        self.uninferred_nodes
+            .push(NodeIdPriority { node_id, priority });
 
         node_id
     }
@@ -268,15 +285,20 @@ impl<L: Logic> PartialTableau<L> {
         parent.live_children += 1;
     }
 
-    fn branch(&self, leaf: NodeId) -> Branch<'_, L> {
-        Branch {
+    pub fn add_child(&mut self, parent: NodeId, child: L::Node) {
+        let child_id = self.add_orphan(child);
+        self.bind_child(parent, child_id);
+    }
+
+    pub fn branch(&self, leaf: NodeId) -> impl Branch<L> {
+        SimpleBranch {
             leaf,
             tableau: self,
         }
     }
 
     /// Iter over every leaf node that is not dead.
-    fn live_leaves(&self) -> Vec<NodeId> {
+    pub fn live_leaves(&self) -> Vec<NodeId> {
         let mut queue: Vec<NodeId> = vec![self.root];
         let mut output = Vec::new();
         while let Some(node_id) = queue.pop() {
@@ -296,6 +318,7 @@ impl<L: Logic> PartialTableau<L> {
         output
     }
 }
+
 impl<L: Logic> Tableau<L> {
     fn get(&self, node_id: NodeId) -> &TableauNode<L::Node> {
         &self.nodes[node_id.index as usize]
@@ -308,17 +331,53 @@ impl<V> TableauNode<V> {
     }
 }
 
-pub struct Branch<'t, L: Logic> {
+pub trait Branch<L: Logic> {
+    fn leaf(&self) -> &L::Node;
+
+    /// Iterator over ancestors of the branch. This method starts at the parent
+    /// of the leaf; that it, it does not return the leaf.
+    fn ancestors<'a>(&'a self) -> impl Iterator<Item = &'a L::Node>
+    where
+        L::Node: 'a;
+
+    fn find(&self, mut predicate: impl FnMut(&L::Node) -> bool) -> Option<&L::Node> {
+        // We take an extra closure because otherwise we would have a && in the signature
+        self.ancestors().find(|&node| predicate(node))
+    }
+
+    fn contains(&self, node: &L::Node) -> bool
+    where
+        L::Node: Eq,
+    {
+        self.ancestors()
+            .find(|&ancestor| ancestor == node)
+            .is_some()
+    }
+
+    /// Iterator over all nodes in the branch. This method differs from
+    /// [`Self::ancestors`] in that it includes the leaf.
+    fn iter<'a>(&'a self) -> impl Iterator<Item = &'a L::Node>
+    where
+        L::Node: 'a,
+    {
+        std::iter::once(self.leaf()).chain(self.ancestors())
+    }
+}
+
+struct SimpleBranch<'t, L: Logic> {
     leaf: NodeId,
     tableau: &'t PartialTableau<L>,
 }
 
-impl<'t, L: Logic> Branch<'t, L> {
-    pub fn leaf(&self) -> &'t L::Node {
+impl<'t, L: Logic> Branch<L> for SimpleBranch<'t, L> {
+    fn leaf(&self) -> &<L as Logic>::Node {
         &self.tableau.get(self.leaf).value
     }
 
-    pub fn ancestors(&self) -> impl Iterator<Item = &L::Node> {
+    fn ancestors<'a>(&'a self) -> impl Iterator<Item = &'a L::Node>
+    where
+        L::Node: 'a,
+    {
         AncestorIter {
             tableau: self.tableau,
             current: self.leaf,
@@ -346,6 +405,7 @@ impl<'t, L: Logic> Iterator for AncestorIter<'t, L> {
 impl<L: Logic> FromStr for PartialTableau<L>
 where
     L::Expr: FromStr,
+    L: Default,
 {
     type Err = TableauParseError<<L::Expr as FromStr>::Err>;
 
@@ -370,7 +430,7 @@ where
 
         let conclusion = L::Expr::from_str(conclusion)?;
 
-        Ok(PartialTableau::new(premises, conclusion))
+        Ok(PartialTableau::new(L::default(), premises, conclusion))
     }
 }
 
@@ -382,6 +442,7 @@ pub enum TableauParseError<E> {
     MissingConclusion,
 }
 
+#[cfg(feature = "parse")]
 impl<E> From<E> for TableauParseError<E> {
     fn from(err: E) -> Self {
         Self::ExpressionError(err)
@@ -442,5 +503,17 @@ where
         }
 
         Ok(())
+    }
+}
+
+impl cmp::Ord for NodeIdPriority {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        self.priority.cmp(&other.priority)
+    }
+}
+
+impl cmp::PartialOrd for NodeIdPriority {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        self.priority.partial_cmp(&other.priority)
     }
 }

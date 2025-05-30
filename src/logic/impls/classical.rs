@@ -1,17 +1,24 @@
 use std::fmt;
 use std::str::FromStr;
 
-use crate::Logic;
 use crate::logic::InferenceRule;
-use crate::tableau::Branch;
+use crate::tableau::{Branch, Tableau};
+use crate::{Logic, PartialTableau};
 
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Classical {}
+
+pub fn infer(input: &str) -> Tableau<Classical> {
+    PartialTableau::from_str(input).unwrap().infer()
+}
+
+pub type Node = Expr;
 
 impl Logic for Classical {
     type Node = Expr;
     type Expr = Expr;
 
-    fn infer(branch: Branch<Self>) -> InferenceRule<Self::Node> {
+    fn infer(&self, branch: impl Branch<Self>) -> InferenceRule<Self::Node> {
         use InferenceRule as IR;
         match branch.leaf() {
             Expr::Const(_) => IR::None,
@@ -34,7 +41,7 @@ impl Logic for Classical {
         }
     }
 
-    fn has_contradiction(branch: Branch<Self>) -> bool {
+    fn has_contradiction(&self, branch: impl Branch<Self>) -> bool {
         let Some((name, value)) = branch.leaf().interpretation() else {
             return false;
         };
@@ -45,12 +52,30 @@ impl Logic for Classical {
             .any(|(other_name, other_value)| other_name == name && other_value != value)
     }
 
-    fn make_premise_node(expr: Self::Expr) -> Self::Node {
+    fn make_premise_node(&self, expr: Self::Expr) -> Self::Node {
         expr
     }
 
-    fn make_conclusion_node(expr: Self::Expr) -> Self::Node {
+    fn make_conclusion_node(&self, expr: Self::Expr) -> Self::Node {
         Expr::Not(Box::new(expr))
+    }
+
+    fn priority(&self, expr: &Self::Node) -> u16 {
+        match expr {
+            Expr::Const(_) => 10,
+            Expr::Not(p) => match p.as_ref() {
+                Expr::Const(_) => 10,
+                Expr::Not(_) => 9,
+                Expr::And(_, _) => 7,
+                Expr::Or(_, _) => 8,
+                Expr::MatImpl(_, _) => 8,
+                Expr::MatEquiv(_, _) => 6,
+            },
+            Expr::And(_, _) => 8,
+            Expr::Or(_, _) => 7,
+            Expr::MatImpl(_, _) => 7,
+            Expr::MatEquiv(_, _) => 6,
+        }
     }
 }
 

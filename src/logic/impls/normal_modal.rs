@@ -1,0 +1,249 @@
+use std::collections::HashSet;
+
+use crate::{
+    Logic, PartialTableau,
+    logic::{
+        InferenceRule,
+        modal::{Expr, ModalNode, World},
+    },
+    tableau::Branch,
+};
+
+#[derive(Debug, Clone, Copy)]
+pub struct NormalModal {
+    /// ρ, for every world w, `w R w`
+    reflexive: bool,
+    /// σ, if `w1 R w2` then `w2 R w1`
+    symmetric: bool,
+    /// τ, if `w1 R w2` and `w2 R w3,` then `w1 R w3`
+    transitive: bool,
+    /// η, if `w1`
+    extendable: bool,
+}
+
+impl Logic for NormalModal {
+    type Node = ModalNode;
+    type Expr = Expr;
+
+    fn infer(&self, branch: impl Branch<Self>) -> InferenceRule<Self::Node> {
+        use InferenceRule as IR;
+
+        let inferrence = match branch.leaf() {
+            ModalNode::Expr { expr, world } => {
+                let world = *world;
+
+                let classical_inference: IR<Expr> = match expr {
+                    Expr::Const(_) => IR::none(),
+                    Expr::Not(p) => match p.as_ref() {
+                        Expr::Const(_) => IR::none(),
+                        Expr::Not(_) => IR::single(*p.clone()),
+                        Expr::And(p, q) => IR::split(p.not(), q.not()),
+                        Expr::Or(p, q) => IR::chain(vec![p.not(), q.not()]),
+                        Expr::MatImpl(p, q) => IR::chain(vec![*p.clone(), q.not()]),
+                        Expr::MatEquiv(p, q) => {
+                            IR::split_and_chain([p.not(), *q.clone()], [*p.clone(), q.not()])
+                        }
+                        Expr::Possibility(p) => IR::Single(Expr::Necessity(Box::new(p.not()))),
+                        Expr::Necessity(p) => IR::Single(Expr::Possibility(Box::new(p.not()))),
+                    },
+                    Expr::And(p, q) => IR::chain(vec![*p.clone(), *q.clone()]),
+                    Expr::Or(p, q) => IR::split(*p.clone(), *q.clone()),
+                    Expr::MatImpl(p, q) => IR::split(p.not(), *q.clone()),
+                    Expr::MatEquiv(p, q) => {
+                        IR::split_and_chain([*p.clone(), *q.clone()], [p.not(), q.not()])
+                    }
+                    Expr::Possibility(p) => {
+                        let max_so_far = branch
+                            .ancestors()
+                            .filter_map(|ancestor| ancestor.world())
+                            .max();
+                        let fresh_world = max_so_far.map_or(World::ZERO, |i| i.next());
+
+                        // These nodes always get added
+                        let regular = [
+                            ModalNode::Relation {
+                                from: world,
+                                to: fresh_world,
+                            },
+                            ModalNode::Expr {
+                                expr: *p.clone(),
+                                world: fresh_world,
+                            },
+                        ]
+                        .into_iter();
+
+                        // Reflexive relation, create `i r i` for every new world `i`
+                        let r = self.reflexive.then(|| ModalNode::Relation {
+                            from: fresh_world,
+                            to: fresh_world,
+                        });
+
+                        return IR::chain(regular.chain(r).collect());
+                    }
+                    Expr::Necessity(p) => {
+                        return IR::chain(
+                            branch
+                                .ancestors()
+                                .filter_map(|ancestor| ancestor.accessible_world_from(world))
+                                .map(|other_world| ModalNode::Expr {
+                                    expr: *p.clone(),
+                                    world: other_world,
+                                })
+                                .collect(),
+                        );
+                    }
+                };
+
+                classical_inference.map(|expr| ModalNode::Expr { expr, world })
+            }
+            ModalNode::Relation { from, to } => {
+                let s = self
+                    .symmetric
+                    .then(|| ModalNode::Relation {
+                        from: *to,
+                        to: *from,
+                    })
+                    // Only add symmetric node if not on branch
+                    .and_then(|sym| (!branch.contains(&sym)).then_some(sym));
+
+                let t = self
+                    .transitive
+                    .then(|| {
+                        // We have j->k, we get the i->j and add i->k
+                        let j = from;
+                        let k = to;
+                        branch
+                            .ancestors()
+                            .filter_map(move |other| match other {
+                                ModalNode::Relation {
+                                    from: i,
+                                    to: j_other,
+                                } if j == j_other => Some(i),
+                                _ => None,
+                            })
+                            .map(|i| ModalNode::Relation { from: *i, to: *k })
+                            // Don't add if already on branch
+                            // TODO: Is this redundant?
+                            .filter(|t| !branch.contains(t))
+                    })
+                    .into_iter()
+                    .flatten();
+
+                IR::chain(t.chain(s).collect())
+            }
+        };
+
+        // Add a new relation i->j to a fresh j from an existing i
+        if matches!(inferrence, IR::None) && self.extendable {
+            // Worlds that don't access any new worlds
+            let mut maybe_leaf_worlds = HashSet::new();
+            let mut non_leaf_worlds = HashSet::new();
+            for node in branch.iter() {
+                match node {
+                    ModalNode::Expr { world, .. } => {
+                        maybe_leaf_worlds.insert(*world);
+                    }
+                    ModalNode::Relation { from: i, to: j } => {
+                        non_leaf_worlds.insert(*i);
+                        maybe_leaf_worlds.insert(*j);
+                    }
+                }
+            }
+
+            let mut leaf_worlds = maybe_leaf_worlds.difference(&non_leaf_worlds);
+            let Some(leaf_world) = leaf_worlds.next() else {
+                return IR::none();
+            };
+
+            let max_so_far = branch.iter().filter_map(|ancestor| ancestor.world()).max();
+            let fresh_world = max_so_far.map_or(World::ZERO, |i| i.next());
+
+            return IR::single(ModalNode::Relation {
+                from: *leaf_world,
+                to: fresh_world,
+            });
+        }
+
+        inferrence
+    }
+
+    fn has_contradiction(&self, branch: impl Branch<Self>) -> bool {
+        let Some((name, value, world)) = branch.leaf().interpretation() else {
+            return false;
+        };
+
+        branch
+            .ancestors()
+            .filter_map(|ancestor| ancestor.interpretation())
+            .any(|(other_name, other_value, other_world)| {
+                other_name == name && other_world == world && other_value != value
+            })
+    }
+
+    fn make_premise_node(&self, expr: Self::Expr) -> Self::Node {
+        ModalNode::Expr {
+            expr,
+            world: World::ZERO,
+        }
+    }
+
+    fn make_conclusion_node(&self, expr: Self::Expr) -> Self::Node {
+        ModalNode::Expr {
+            expr: Expr::Not(Box::new(expr)),
+            world: World::ZERO,
+        }
+    }
+
+    fn initialize(tableau: &mut PartialTableau<Self>) {
+        // NOTE: This is a bit overcomplicated for basically just adding
+        // the rule `0 R 0`. But it is more "correct" in that it adds the
+        // reflexive relation to each unique world in the tableau, it's just
+        // that currently the only unique world is `World::ZERO` in one branch.
+        if tableau.logic.reflexive {
+            for leaf in tableau.live_leaves() {
+                let branch = tableau.branch(leaf);
+                let unique_worlds = branch
+                    .iter()
+                    .filter_map(|node| node.world())
+                    .collect::<HashSet<_>>();
+                drop(branch);
+
+                for unique_world in unique_worlds {
+                    let node = ModalNode::Relation {
+                        from: unique_world,
+                        to: unique_world,
+                    };
+
+                    tableau.add_child(leaf, node);
+                }
+            }
+        }
+    }
+}
+
+impl NormalModal {
+    // TODO: Make type-safe builder.
+    pub fn new(
+        reflexive: bool,
+        symmetric: bool,
+        transitive: bool,
+        extendable: bool,
+    ) -> Option<Self> {
+        if reflexive && !extendable {
+            // Reflexivity implies extendability
+            return None;
+        }
+
+        if reflexive && symmetric && transitive && !extendable {
+            // ρ, σ, τ imply η
+            return None;
+        }
+
+        Some(Self {
+            reflexive,
+            symmetric,
+            transitive,
+            extendable,
+        })
+    }
+}

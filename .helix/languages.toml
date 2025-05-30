@@ -19,13 +19,13 @@ RUST_LOG = "info,simple-completion-language-server=info"
 LOG_FILE = "/tmp/completion.log"
 
 # append language server to existed languages
-[[language]]
-name = "rust"
-language-servers = [ "scls", "rust-analyzer" ]
+# [[language]]
+# name = "rust"
+# language-servers = [ "scls", "rust-analyzer" ]
 
 [[language]]
 name = "toml"
-language-servers = [ "scls" ]
+language-servers = [ "scls", "taplo" ]
 
 # introduce a new language to enable completion on any doc by forcing set language with :set-language stub
 [[language]]

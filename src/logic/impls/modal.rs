@@ -1,14 +1,23 @@
 use std::{fmt, ops::Deref, str::FromStr};
 
-use crate::{Logic, logic::InferenceRule, tableau::Branch};
+use crate::{
+    Logic, PartialTableau,
+    logic::InferenceRule,
+    tableau::{Branch, Tableau},
+};
 
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Modal {}
+
+pub fn infer(input: &str) -> Tableau<Modal> {
+    PartialTableau::from_str(input).unwrap().infer()
+}
 
 impl Logic for Modal {
     type Node = ModalNode;
     type Expr = Expr;
 
-    fn infer(branch: Branch<Self>) -> InferenceRule<Self::Node> {
+    fn infer(&self, branch: impl Branch<Self>) -> InferenceRule<Self::Node> {
         use InferenceRule as IR;
 
         let ModalNode::Expr { expr, world } = branch.leaf() else {
@@ -73,7 +82,7 @@ impl Logic for Modal {
         classical_inference.map(|expr| ModalNode::Expr { expr, world })
     }
 
-    fn has_contradiction(branch: Branch<Self>) -> bool {
+    fn has_contradiction(&self, branch: impl Branch<Self>) -> bool {
         let Some((name, value, world)) = branch.leaf().interpretation() else {
             return false;
         };
@@ -86,14 +95,14 @@ impl Logic for Modal {
             })
     }
 
-    fn make_premise_node(expr: Self::Expr) -> Self::Node {
+    fn make_premise_node(&self, expr: Self::Expr) -> Self::Node {
         ModalNode::Expr {
             expr,
             world: World::ZERO,
         }
     }
 
-    fn make_conclusion_node(expr: Self::Expr) -> Self::Node {
+    fn make_conclusion_node(&self, expr: Self::Expr) -> Self::Node {
         ModalNode::Expr {
             expr: Expr::Not(Box::new(expr)),
             world: World::ZERO,
@@ -101,7 +110,7 @@ impl Logic for Modal {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     // TODO: Use some kind of small string type
     Const(Box<str>),
@@ -115,33 +124,33 @@ pub enum Expr {
 }
 
 impl Expr {
-    fn not(self: &Box<Self>) -> Self {
+    pub fn not(self: &Box<Self>) -> Self {
         Self::Not(self.clone())
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModalNode {
     Expr { expr: Expr, world: World },
     Relation { from: World, to: World },
 }
 
 impl ModalNode {
-    fn world(&self) -> Option<World> {
+    pub fn world(&self) -> Option<World> {
         match self {
             Self::Expr { world, .. } => Some(*world),
             _ => None,
         }
     }
 
-    fn accessible_world_from(&self, world: World) -> Option<World> {
+    pub fn accessible_world_from(&self, world: World) -> Option<World> {
         match self {
             Self::Relation { from, to } if *from == world => Some(*to),
             _ => None,
         }
     }
 
-    fn interpretation(&self) -> Option<(&str, bool, World)> {
+    pub fn interpretation(&self) -> Option<(&str, bool, World)> {
         match self {
             Self::Expr { expr, world } => match expr {
                 Expr::Const(name) => Some((name, true, *world)),
@@ -156,13 +165,13 @@ impl ModalNode {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct World(u16);
 
 impl World {
-    const ZERO: Self = World(0);
+    pub const ZERO: Self = World(0);
 
-    fn next(&self) -> Self {
+    pub fn next(&self) -> Self {
         World(self.0 + 1)
     }
 }
@@ -213,8 +222,8 @@ impl FromStr for Expr {
         };
 
         fn ident<'a>(input: &mut &'a str) -> ModalResult<&'a str> {
-            let tokens = ['¬', '∨', '∧', '⊃', '≡', '◻', '⋄', '(', ')', ' '];
-            let wrong_tokens = ['⬦', '◇', '⬚', '⬜', '□', '◽', '□'];
+            let tokens = ['¬', '∨', '∧', '⊃', '≡', '□', '◇', '(', ')', ' '];
+            let wrong_tokens = ['⬦', '⋄', '⬚', '◻', '⬜', '◽'];
 
             let is_ident = |char| {
                 if wrong_tokens.contains(&char) {
@@ -231,8 +240,8 @@ impl FromStr for Expr {
                 delimited('(', expr, ')'),
                 ident.map(|name: &str| Expr::Const(name.to_string().into_boxed_str())),
                 preceded('¬', expr).map(|expr| Expr::Not(Box::new(expr))),
-                preceded('⋄', expr).map(|p| Expr::Possibility(Box::new(p))),
-                preceded('◻', expr).map(|p| Expr::Necessity(Box::new(p))),
+                preceded('◇', expr).map(|p| Expr::Possibility(Box::new(p))),
+                preceded('□', expr).map(|p| Expr::Necessity(Box::new(p))),
             ));
 
             delimited(space0, main, space0).parse_next(input)

@@ -26,15 +26,9 @@
       perSystem =
         { system, ... }:
         let
-          toolchain = pkgs.rust-bin.selectLatestNightlyWith (
-            toolchain:
-            toolchain.default.override {
-              extensions = [
-                "rust-src"
-                "miri"
-              ];
-            }
-          );
+          toolchain = pkgs.rust-bin.beta.latest.default.override {
+            targets = [ "wasm32-unknown-unknown" ];
+          };
           overlays = [ (import rust-overlay) ];
           pkgs = import nixpkgs { inherit system overlays; };
         in
@@ -45,6 +39,7 @@
               toolchain
               pkgs.rust-analyzer
               pkgs.cargo-nextest
+              pkgs.simple-completion-language-server
             ];
           };
         };
