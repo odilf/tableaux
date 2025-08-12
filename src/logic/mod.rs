@@ -36,7 +36,7 @@ pub trait Logic {
     /// Contructs a new [`PartialTableau`] with the given premises and conclusion.
     ///
     /// See also [`PartialTableau::new`].
-    fn tableu(
+    fn tableau(
         self,
         premises: impl IntoIterator<Item = Self::Expr>,
         conclusion: Self::Expr,

@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{cmp, collections::HashSet};
 
 use crate::{
     Logic, PartialTableau,
@@ -9,7 +9,7 @@ use crate::{
     tableau::Branch,
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct NormalModal {
     /// ρ, for every world w, `w R w`
     reflexive: bool,
@@ -60,7 +60,7 @@ impl Logic for NormalModal {
                         let fresh_world = max_so_far.map_or(World::ZERO, |i| i.next());
 
                         // These nodes always get added
-                        let regular = [
+                        let basic = [
                             ModalNode::Relation {
                                 from: world,
                                 to: fresh_world,
@@ -78,7 +78,7 @@ impl Logic for NormalModal {
                             to: fresh_world,
                         });
 
-                        return IR::chain(regular.chain(r).collect());
+                        return IR::chain(basic.chain(r).collect());
                     }
                     Expr::Necessity(p) => {
                         return IR::chain(
@@ -221,29 +221,109 @@ impl Logic for NormalModal {
     }
 }
 
+/// ρ, for every world w, `w R w`
+/// σ, if `w1 R w2` then `w2 R w1`
+/// τ, if `w1 R w2` and `w2 R w3,` then `w1 R w3`
+/// η, if `w1`
+
 impl NormalModal {
-    // TODO: Make type-safe builder.
-    pub fn new(
-        reflexive: bool,
-        symmetric: bool,
-        transitive: bool,
-        extendable: bool,
-    ) -> Option<Self> {
-        if reflexive && !extendable {
-            // Reflexivity implies extendability
-            return None;
+    /// Creates K, the basic modal logic.
+    pub const fn new() -> Self {
+        Self {
+            reflexive: false,
+            symmetric: false,
+            transitive: false,
+            extendable: false,
         }
+    }
 
-        if reflexive && symmetric && transitive && !extendable {
-            // ρ, σ, τ imply η
-            return None;
+    pub const fn reflexive(self) -> Self {
+        Self {
+            reflexive: true,
+            // Reflexivity implies extendability, so we can remove the explicit
+            // extendability which tends to me more compute heavy and get the
+            // same result.
+            extendable: false,
+            ..self
         }
+    }
 
-        Some(Self {
-            reflexive,
-            symmetric,
-            transitive,
-            extendable,
-        })
+    pub const fn symmetric(self) -> Self {
+        Self {
+            symmetric: true,
+            ..self
+        }
+    }
+
+    pub const fn transitive(self) -> Self {
+        Self {
+            transitive: true,
+            ..self
+        }
+    }
+
+    pub const fn extendable(self) -> Self {
+        Self {
+            extendable: true,
+            ..self
+        }
+    }
+
+    const fn normalized(self) -> Self {
+        Self {
+            // sigma tau eta imply rho
+            reflexive: self.reflexive || (self.symmetric && self.transitive && self.extendable),
+            symmetric: self.symmetric,
+            transitive: self.transitive,
+            // rho implies eta
+            extendable: self.extendable || self.reflexive,
+        }
     }
 }
+/// Kρ
+pub const T: NormalModal = NormalModal::new().reflexive();
+
+/// Kη
+pub const D: NormalModal = NormalModal {
+    reflexive: false,
+    symmetric: false,
+    transitive: false,
+    extendable: true,
+};
+
+/// Kρσ
+pub const B: NormalModal = NormalModal {
+    reflexive: false,
+    symmetric: false,
+    transitive: true,
+    extendable: true,
+};
+
+/// Kρτ
+pub const S4: NormalModal = NormalModal {
+    reflexive: false,
+    symmetric: false,
+    transitive: true,
+    extendable: true,
+};
+
+/// Kρστ
+pub const S5: NormalModal = NormalModal {
+    reflexive: false,
+    symmetric: false,
+    transitive: true,
+    extendable: true,
+};
+
+impl cmp::PartialEq for NormalModal {
+    fn eq(&self, other: &Self) -> bool {
+        let a = self.normalized();
+        let b = other.normalized();
+        a.reflexive == b.reflexive
+            && a.symmetric == b.symmetric
+            && a.transitive == b.transitive
+            && a.extendable == b.extendable
+    }
+}
+
+impl cmp::Eq for NormalModal {}

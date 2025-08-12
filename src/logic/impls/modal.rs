@@ -239,9 +239,9 @@ impl FromStr for Expr {
             let main = alt((
                 delimited('(', expr, ')'),
                 ident.map(|name: &str| Expr::Const(name.to_string().into_boxed_str())),
-                preceded('¬', expr).map(|expr| Expr::Not(Box::new(expr))),
-                preceded('◇', expr).map(|p| Expr::Possibility(Box::new(p))),
-                preceded('□', expr).map(|p| Expr::Necessity(Box::new(p))),
+                preceded('¬', expr_single).map(|expr| Expr::Not(Box::new(expr))),
+                preceded('◇', expr_single).map(|p| Expr::Possibility(Box::new(p))),
+                preceded('□', expr_single).map(|p| Expr::Necessity(Box::new(p))),
             ));
 
             delimited(space0, main, space0).parse_next(input)

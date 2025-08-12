@@ -63,6 +63,8 @@ impl<L: Logic> PartialTableau<L> {
             );
         }
 
+        L::initialize(&mut tableau);
+
         tableau
     }
 }
@@ -223,6 +225,28 @@ impl<L: Logic> PartialTableau<L> {
 pub struct Tableau<L: Logic> {
     nodes: Vec<TableauNode<L::Node>>,
     root: NodeId,
+}
+
+impl<L: Logic> Tableau<L> {
+    pub fn countermodel(&self) -> Option<Countermodel<L::Node>> {
+        if self.holds() {
+            return None;
+        }
+
+        let mut nodes = Vec::new();
+        let mut stack = vec![self.root];
+
+        while let Some(node_id) = stack.pop() {
+            if self.get(node_id).is_dead() {
+                continue;
+            }
+
+            nodes.push(self.get(node_id).value.clone());
+            stack.extend(&self.get(node_id).children);
+        }
+
+        Some(Countermodel { nodes })
+    }
 }
 
 #[derive(Debug, Clone)]
