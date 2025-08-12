@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{cmp, collections::BinaryHeap, error::Error, str::FromStr};
+use std::{cmp, collections::BinaryHeap, error::Error, marker::PhantomData, str::FromStr};
 
 use crate::Logic;
 
@@ -360,9 +360,9 @@ pub trait Branch<L: Logic> {
 
     /// Iterator over ancestors of the branch. This method starts at the parent
     /// of the leaf; that it, it does not return the leaf.
-    fn ancestors<'a>(&'a self) -> impl Iterator<Item = &'a L::Node>
+    fn ancestors<'t>(&'t self) -> impl Iterator<Item = &'t L::Node>
     where
-        L::Node: 'a;
+        L::Node: 't;
 
     fn find(&self, mut predicate: impl FnMut(&L::Node) -> bool) -> Option<&L::Node> {
         // We take an extra closure because otherwise we would have a && in the signature
@@ -380,11 +380,25 @@ pub trait Branch<L: Logic> {
 
     /// Iterator over all nodes in the branch. This method differs from
     /// [`Self::ancestors`] in that it includes the leaf.
-    fn iter<'a>(&'a self) -> impl Iterator<Item = &'a L::Node>
+    fn iter<'t>(&'t self) -> impl Iterator<Item = &'t L::Node>
     where
-        L::Node: 'a,
+        L::Node: 't,
     {
         std::iter::once(self.leaf()).chain(self.ancestors())
+    }
+
+    fn map<'t, L2: Logic, F: Fn(&L::Node) -> &L2::Node>(
+        &'t self,
+        map_fn: F,
+    ) -> MappedBranch<'t, Self, L, L2, F>
+    where
+        Self: Sized,
+    {
+        MappedBranch {
+            branch: self,
+            map_fn,
+            _marker: PhantomData,
+        }
     }
 }
 
@@ -420,6 +434,27 @@ impl<'t, L: Logic> Iterator for AncestorIter<'t, L> {
         let parent = self.tableau.get(self.current).parent?;
         self.current = parent;
         Some(&self.tableau.get(parent).value)
+    }
+}
+
+pub struct MappedBranch<'t, B: Branch<L1>, L1: Logic, L2: Logic, F: Fn(&L1::Node) -> &L2::Node> {
+    branch: &'t B,
+    map_fn: F,
+    _marker: PhantomData<(L1, L2)>,
+}
+
+impl<'t, B: Branch<L1>, L1: Logic, L2: Logic, F: Fn(&L1::Node) -> &L2::Node> Branch<L2>
+    for MappedBranch<'t, B, L1, L2, F>
+{
+    fn leaf(&self) -> &L2::Node {
+        (self.map_fn)(&self.branch.leaf())
+    }
+
+    fn ancestors<'a>(&'a self) -> impl Iterator<Item = &'a L2::Node>
+    where
+        L2::Node: 'a,
+    {
+        (self.branch.ancestors()).map(|node| (self.map_fn)(node))
     }
 }
 

@@ -14,13 +14,13 @@ pub fn infer(input: &str) -> Tableau<Modal> {
 }
 
 impl Logic for Modal {
-    type Node = ModalNode;
+    type Node = Node;
     type Expr = Expr;
 
     fn infer(&self, branch: impl Branch<Self>) -> InferenceRule<Self::Node> {
         use InferenceRule as IR;
 
-        let ModalNode::Expr { expr, world } = branch.leaf() else {
+        let Node::Expr { expr, world } = branch.leaf() else {
             // Relations don't do inferrence in basic modal logic.
             return IR::none();
         };
@@ -55,11 +55,11 @@ impl Logic for Modal {
                 let fresh_world = max_so_far.map_or(World::ZERO, |i| i.next());
 
                 return IR::chain(vec![
-                    ModalNode::Relation {
+                    Node::Relation {
                         from: world,
                         to: fresh_world,
                     },
-                    ModalNode::Expr {
+                    Node::Expr {
                         expr: *p.clone(),
                         world: fresh_world,
                     },
@@ -70,7 +70,7 @@ impl Logic for Modal {
                     branch
                         .ancestors()
                         .filter_map(|ancestor| ancestor.accessible_world_from(world))
-                        .map(|other_world| ModalNode::Expr {
+                        .map(|other_world| Node::Expr {
                             expr: *p.clone(),
                             world: other_world,
                         })
@@ -79,7 +79,7 @@ impl Logic for Modal {
             }
         };
 
-        classical_inference.map(|expr| ModalNode::Expr { expr, world })
+        classical_inference.map(|expr| Node::Expr { expr, world })
     }
 
     fn has_contradiction(&self, branch: impl Branch<Self>) -> bool {
@@ -96,14 +96,14 @@ impl Logic for Modal {
     }
 
     fn make_premise_node(&self, expr: Self::Expr) -> Self::Node {
-        ModalNode::Expr {
+        Node::Expr {
             expr,
             world: World::ZERO,
         }
     }
 
     fn make_conclusion_node(&self, expr: Self::Expr) -> Self::Node {
-        ModalNode::Expr {
+        Node::Expr {
             expr: Expr::Not(Box::new(expr)),
             world: World::ZERO,
         }
@@ -130,12 +130,12 @@ impl Expr {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ModalNode {
+pub enum Node {
     Expr { expr: Expr, world: World },
     Relation { from: World, to: World },
 }
 
-impl ModalNode {
+impl Node {
     pub fn world(&self) -> Option<World> {
         match self {
             Self::Expr { world, .. } => Some(*world),
@@ -197,11 +197,11 @@ impl fmt::Display for World {
     }
 }
 
-impl fmt::Display for ModalNode {
+impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ModalNode::Expr { expr, world } => write!(f, "{expr}, {world}"),
-            ModalNode::Relation { from, to } => write!(f, "{from}r{to}"),
+            Node::Expr { expr, world } => write!(f, "{expr}, {world}"),
+            Node::Relation { from, to } => write!(f, "{from}r{to}"),
         }
     }
 }

@@ -12,8 +12,6 @@ pub fn infer(input: &str) -> Tableau<Classical> {
     PartialTableau::from_str(input).unwrap().infer()
 }
 
-pub type Node = Expr;
-
 impl Logic for Classical {
     type Node = Expr;
     type Expr = Expr;

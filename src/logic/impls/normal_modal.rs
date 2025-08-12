@@ -4,7 +4,7 @@ use crate::{
     Logic, PartialTableau,
     logic::{
         InferenceRule,
-        modal::{Expr, ModalNode, World},
+        modal::{Expr, Node, World},
     },
     tableau::Branch,
 };
@@ -22,14 +22,14 @@ pub struct NormalModal {
 }
 
 impl Logic for NormalModal {
-    type Node = ModalNode;
+    type Node = Node;
     type Expr = Expr;
 
     fn infer(&self, branch: impl Branch<Self>) -> InferenceRule<Self::Node> {
         use InferenceRule as IR;
 
         let inferrence = match branch.leaf() {
-            ModalNode::Expr { expr, world } => {
+            Node::Expr { expr, world } => {
                 let world = *world;
 
                 let classical_inference: IR<Expr> = match expr {
@@ -61,11 +61,11 @@ impl Logic for NormalModal {
 
                         // These nodes always get added
                         let basic = [
-                            ModalNode::Relation {
+                            Node::Relation {
                                 from: world,
                                 to: fresh_world,
                             },
-                            ModalNode::Expr {
+                            Node::Expr {
                                 expr: *p.clone(),
                                 world: fresh_world,
                             },
@@ -73,7 +73,7 @@ impl Logic for NormalModal {
                         .into_iter();
 
                         // Reflexive relation, create `i r i` for every new world `i`
-                        let r = self.reflexive.then(|| ModalNode::Relation {
+                        let r = self.reflexive.then(|| Node::Relation {
                             from: fresh_world,
                             to: fresh_world,
                         });
@@ -85,7 +85,7 @@ impl Logic for NormalModal {
                             branch
                                 .ancestors()
                                 .filter_map(|ancestor| ancestor.accessible_world_from(world))
-                                .map(|other_world| ModalNode::Expr {
+                                .map(|other_world| Node::Expr {
                                     expr: *p.clone(),
                                     world: other_world,
                                 })
@@ -94,12 +94,12 @@ impl Logic for NormalModal {
                     }
                 };
 
-                classical_inference.map(|expr| ModalNode::Expr { expr, world })
+                classical_inference.map(|expr| Node::Expr { expr, world })
             }
-            ModalNode::Relation { from, to } => {
+            Node::Relation { from, to } => {
                 let s = self
                     .symmetric
-                    .then(|| ModalNode::Relation {
+                    .then(|| Node::Relation {
                         from: *to,
                         to: *from,
                     })
@@ -115,13 +115,13 @@ impl Logic for NormalModal {
                         branch
                             .ancestors()
                             .filter_map(move |other| match other {
-                                ModalNode::Relation {
+                                Node::Relation {
                                     from: i,
                                     to: j_other,
                                 } if j == j_other => Some(i),
                                 _ => None,
                             })
-                            .map(|i| ModalNode::Relation { from: *i, to: *k })
+                            .map(|i| Node::Relation { from: *i, to: *k })
                             // Don't add if already on branch
                             // TODO: Is this redundant?
                             .filter(|t| !branch.contains(t))
@@ -140,10 +140,10 @@ impl Logic for NormalModal {
             let mut non_leaf_worlds = HashSet::new();
             for node in branch.iter() {
                 match node {
-                    ModalNode::Expr { world, .. } => {
+                    Node::Expr { world, .. } => {
                         maybe_leaf_worlds.insert(*world);
                     }
-                    ModalNode::Relation { from: i, to: j } => {
+                    Node::Relation { from: i, to: j } => {
                         non_leaf_worlds.insert(*i);
                         maybe_leaf_worlds.insert(*j);
                     }
@@ -158,7 +158,7 @@ impl Logic for NormalModal {
             let max_so_far = branch.iter().filter_map(|ancestor| ancestor.world()).max();
             let fresh_world = max_so_far.map_or(World::ZERO, |i| i.next());
 
-            return IR::single(ModalNode::Relation {
+            return IR::single(Node::Relation {
                 from: *leaf_world,
                 to: fresh_world,
             });
@@ -181,14 +181,14 @@ impl Logic for NormalModal {
     }
 
     fn make_premise_node(&self, expr: Self::Expr) -> Self::Node {
-        ModalNode::Expr {
+        Node::Expr {
             expr,
             world: World::ZERO,
         }
     }
 
     fn make_conclusion_node(&self, expr: Self::Expr) -> Self::Node {
-        ModalNode::Expr {
+        Node::Expr {
             expr: Expr::Not(Box::new(expr)),
             world: World::ZERO,
         }
@@ -209,7 +209,7 @@ impl Logic for NormalModal {
                 drop(branch);
 
                 for unique_world in unique_worlds {
-                    let node = ModalNode::Relation {
+                    let node = Node::Relation {
                         from: unique_world,
                         to: unique_world,
                     };

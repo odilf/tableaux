@@ -5,6 +5,8 @@ mod dynamic;
 
 use crate::{PartialTableau, tableau::Branch};
 
+pub use dynamic::*;
+
 pub trait Logic {
     type Node: Clone;
     type Expr;
@@ -92,26 +94,3 @@ impl<E> InferenceRule<E> {
         }
     }
 }
-
-// Re-exports
-// pub mod classical {
-//     use std::str::FromStr;
-
-//     pub use crate::classical::Classical;
-//     use crate::{PartialTableau, tableau::Tableau};
-
-//     pub fn infer(statement: &str) -> Tableau<Classical> {
-//         PartialTableau::from_str(statement).unwrap().infer()
-//     }
-// }
-
-// pub mod modal {
-//     use std::str::FromStr;
-
-//     pub use crate::modal::Modal;
-//     use crate::{PartialTableau, tableau::Tableau};
-
-//     pub fn infer(statement: &str) -> Tableau<Modal> {
-//         PartialTableau::from_str(statement).unwrap().infer()
-//     }
-// }
