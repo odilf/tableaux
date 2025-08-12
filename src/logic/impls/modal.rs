@@ -6,6 +6,10 @@ use crate::{
     tableau::{Branch, Tableau},
 };
 
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
+
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Modal {}
 
@@ -212,36 +216,22 @@ impl FromStr for Expr {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use crate::logic::lexer::*;
         use winnow::{
             ModalResult, Parser,
             ascii::space0,
             combinator::alt,
             combinator::{delimited, preceded},
             seq,
-            token::take_while,
         };
-
-        fn ident<'a>(input: &mut &'a str) -> ModalResult<&'a str> {
-            let tokens = ['¬', '∨', '∧', '⊃', '≡', '□', '◇', '(', ')', ' '];
-            let wrong_tokens = ['⬦', '⋄', '⬚', '◻', '⬜', '◽'];
-
-            let is_ident = |char| {
-                if wrong_tokens.contains(&char) {
-                    panic!("Wrong token! {char}");
-                }
-                !tokens.contains(&char)
-            };
-
-            take_while(1.., is_ident).parse_next(input)
-        }
 
         fn expr_single<'a>(input: &mut &'a str) -> ModalResult<Expr> {
             let main = alt((
-                delimited('(', expr, ')'),
+                delimited(left_paren, expr, right_paren),
                 ident.map(|name: &str| Expr::Const(name.to_string().into_boxed_str())),
-                preceded('¬', expr_single).map(|expr| Expr::Not(Box::new(expr))),
-                preceded('◇', expr_single).map(|p| Expr::Possibility(Box::new(p))),
-                preceded('□', expr_single).map(|p| Expr::Necessity(Box::new(p))),
+                preceded(not, expr_single).map(|expr| Expr::Not(Box::new(expr))),
+                preceded(possib, expr_single).map(|p| Expr::Possibility(Box::new(p))),
+                preceded(necess, expr_single).map(|p| Expr::Necessity(Box::new(p))),
             ));
 
             delimited(space0, main, space0).parse_next(input)
@@ -249,11 +239,11 @@ impl FromStr for Expr {
 
         fn expr<'a>(input: &mut &'a str) -> ModalResult<Expr> {
             let main = alt((
-                seq!(expr_single, '∧', expr).map(|(a, _, b)| Expr::And(Box::new(a), Box::new(b))),
-                seq!(expr_single, '∨', expr).map(|(a, _, b)| Expr::Or(Box::new(a), Box::new(b))),
-                seq!(expr_single, '⊃', expr)
+                seq!(expr_single, and, expr).map(|(a, _, b)| Expr::And(Box::new(a), Box::new(b))),
+                seq!(expr_single, or, expr).map(|(a, _, b)| Expr::Or(Box::new(a), Box::new(b))),
+                seq!(expr_single, mat_impl, expr)
                     .map(|(a, _, b)| Expr::MatImpl(Box::new(a), Box::new(b))),
-                seq!(expr_single, '≡', expr)
+                seq!(expr_single, mat_equiv, expr)
                     .map(|(a, _, b)| Expr::MatEquiv(Box::new(a), Box::new(b))),
                 expr_single,
             ));

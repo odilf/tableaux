@@ -5,8 +5,14 @@ edition = "2024"
 
 [dependencies]
 anstyle = "1.0.10"
+console_error_panic_hook = "0.1.7"
+wasm-bindgen = { version = "0.2.100", optional = true }
 winnow = { version = "0.7.10", optional = true }
 
 [features]
-parse = ["winnow"]
-default = ["parse"]
+default = ["parse", "wasm"]
+parse = ["dep:winnow"]
+wasm = ["dep:wasm-bindgen"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]

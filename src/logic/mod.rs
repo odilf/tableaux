@@ -2,6 +2,8 @@ mod impls;
 pub use impls::*;
 
 mod dynamic;
+#[cfg(feature = "parse")]
+mod lexer;
 
 use crate::{PartialTableau, tableau::Branch};
 

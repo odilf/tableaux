@@ -8,17 +8,17 @@ pub struct PartialTableau<L: Logic> {
     /// The underlying logic system of the tableau.
     pub logic: L,
     nodes: Vec<TableauNode<L::Node>>,
-    root: NodeId,
+    pub(crate) root: NodeId,
     /// Non-terminal nodes that need to be expanded.
     uninferred_nodes: BinaryHeap<NodeIdPriority>,
 }
 
 #[derive(Debug, Clone)]
 pub struct TableauNode<V> {
-    value: V,
+    pub(crate) value: V,
     parent: Option<NodeId>,
     // TODO: Use a smallvec type
-    children: Vec<NodeId>,
+    pub(crate) children: Vec<NodeId>,
     live_children: u8,
     // TODO: Add death reason.
     death_reason: Option<()>,
@@ -26,7 +26,7 @@ pub struct TableauNode<V> {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NodeId {
-    index: u16,
+    pub(crate) index: u16,
 }
 
 /// A [`NodeId`] that has some priority, used
@@ -116,7 +116,10 @@ impl<L: Logic> PartialTableau<L> {
         }
     }
 
-    fn infer_once(&mut self) -> Option<()> {
+    /// Infers the first prioritized uninferred node.
+    ///
+    /// Returns `Some(())` if an inference was made, `None` otherwise.
+    pub fn infer_once(&mut self) -> Option<()> {
         let node_id = self.uninferred_nodes.pop()?.node_id;
         let branch = self.branch(node_id);
 
@@ -270,7 +273,7 @@ impl<N: fmt::Display> fmt::Display for Countermodel<N> {
 // -- Tree operations --
 
 impl<L: Logic> PartialTableau<L> {
-    fn get(&self, node_id: NodeId) -> &TableauNode<L::Node> {
+    pub(crate) fn get(&self, node_id: NodeId) -> &TableauNode<L::Node> {
         &self.nodes[node_id.index as usize]
     }
 

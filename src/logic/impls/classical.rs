@@ -5,6 +5,10 @@ use crate::logic::InferenceRule;
 use crate::tableau::{Branch, Tableau};
 use crate::{Logic, PartialTableau};
 
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
+
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Classical {}
 
@@ -124,27 +128,20 @@ impl FromStr for Expr {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use crate::logic::lexer::*;
         use winnow::{
             ModalResult, Parser,
             ascii::space0,
             combinator::alt,
             combinator::{delimited, preceded},
             seq,
-            token::take_while,
         };
-
-        fn ident<'a>(input: &mut &'a str) -> ModalResult<&'a str> {
-            let tokens = ['¬', '∨', '∧', '⊃', '≡', '(', ')', ' '];
-
-            let is_ident = |char| !tokens.contains(&char);
-            take_while(1.., is_ident).parse_next(input)
-        }
 
         fn expr_single<'a>(input: &mut &'a str) -> ModalResult<Expr> {
             let main = alt((
-                delimited('(', expr, ')'),
+                delimited(left_paren, expr, right_paren),
                 ident.map(|name: &str| Expr::Const(name.to_string().into_boxed_str())),
-                preceded('¬', expr).map(|expr| Expr::Not(Box::new(expr))),
+                preceded(not, expr_single).map(|expr| Expr::Not(Box::new(expr))),
             ));
 
             delimited(space0, main, space0).parse_next(input)
@@ -152,11 +149,11 @@ impl FromStr for Expr {
 
         fn expr<'a>(input: &mut &'a str) -> ModalResult<Expr> {
             let main = alt((
-                seq!(expr_single, '∧', expr).map(|(a, _, b)| Expr::And(Box::new(a), Box::new(b))),
-                seq!(expr_single, '∨', expr).map(|(a, _, b)| Expr::Or(Box::new(a), Box::new(b))),
-                seq!(expr_single, '⊃', expr)
+                seq!(expr_single, and, expr).map(|(a, _, b)| Expr::And(Box::new(a), Box::new(b))),
+                seq!(expr_single, or, expr).map(|(a, _, b)| Expr::Or(Box::new(a), Box::new(b))),
+                seq!(expr_single, mat_impl, expr)
                     .map(|(a, _, b)| Expr::MatImpl(Box::new(a), Box::new(b))),
-                seq!(expr_single, '≡', expr)
+                seq!(expr_single, mat_equiv, expr)
                     .map(|(a, _, b)| Expr::MatEquiv(Box::new(a), Box::new(b))),
                 expr_single,
             ));

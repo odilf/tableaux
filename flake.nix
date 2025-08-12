@@ -40,6 +40,10 @@
               pkgs.rust-analyzer
               pkgs.cargo-nextest
               pkgs.simple-completion-language-server
+
+              pkgs.pnpm
+              pkgs.nodejs_22
+              pkgs.wasm-pack
             ];
           };
         };

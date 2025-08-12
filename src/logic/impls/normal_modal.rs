@@ -9,16 +9,20 @@ use crate::{
     tableau::Branch,
 };
 
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
+
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Debug, Clone, Copy, Default)]
 pub struct NormalModal {
     /// ρ, for every world w, `w R w`
-    reflexive: bool,
+    pub reflexive: bool,
     /// σ, if `w1 R w2` then `w2 R w1`
-    symmetric: bool,
+    pub symmetric: bool,
     /// τ, if `w1 R w2` and `w2 R w3,` then `w1 R w3`
-    transitive: bool,
+    pub transitive: bool,
     /// η, if `w1`
-    extendable: bool,
+    pub extendable: bool,
 }
 
 impl Logic for NormalModal {
@@ -220,11 +224,6 @@ impl Logic for NormalModal {
         }
     }
 }
-
-/// ρ, for every world w, `w R w`
-/// σ, if `w1 R w2` then `w2 R w1`
-/// τ, if `w1 R w2` and `w2 R w3,` then `w1 R w3`
-/// η, if `w1`
 
 impl NormalModal {
     /// Creates K, the basic modal logic.
