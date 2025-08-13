@@ -3,25 +3,62 @@
 	import Tableau from './Tableau.svelte';
 	type Props = {
 		logic: Logic;
-		premises: string[];
+		premises: string;
 		conclusion: string;
 	};
 
 	let { logic = $bindable(), premises = $bindable(), conclusion = $bindable() }: Props = $props();
 
-	let tableau = $derived.by(() => {
-		const t = logic.tableau(premises, conclusion);
-		t.infer();
-		return t;
+	let tableauResult = $derived.by(() => {
+		try {
+			const t = logic.tableau(premises.split(','), conclusion);
+			t.infer();
+			return { ok: t };
+		} catch (error) {
+			return { error };
+		}
 	});
 </script>
 
-<label for="premises">Premises</label>
-<textarea id="premises" name="premises" rows="1" cols="33"> {premises} </textarea>
+<div>
+	<div class="grid grid-cols-2 place-items-center font-bold">
+		<label for="premises">Premises</label>
+		<label for="conclusion">Conclusion</label>
+	</div>
 
-<div>⊢</div>
-<label for="conclusion">Conclusion</label>
-<textarea id="conclusion" name="conclusion" rows="1" cols="33" bind:value={conclusion}> </textarea>
+	<div
+		class="grid grid-cols-[1fr_auto_1fr] place-content-center place-items-center gap-2 font-math"
+	>
+		<textarea
+			id="premises"
+			name="premises"
+			rows="1"
+			class="w-full text-center"
+			bind:value={premises}
+		>
+		</textarea>
+		<div class="font-bold">⊢</div>
+		<textarea
+			id="conclusion"
+			name="conclusion"
+			rows="1"
+			class="w-full text-center"
+			bind:value={conclusion}
+		>
+		</textarea>
+	</div>
+</div>
 
-{conclusion}
-<Tableau {tableau} />
+{#if tableauResult.ok !== undefined}
+	<Tableau tableau={tableauResult.ok} />
+{:else if 'error' in tableauResult}
+	<div>
+		Error: <pre>{tableauResult.error}</pre>
+	</div>
+{/if}
+
+<style>
+	textarea {
+		resize: none;
+	}
+</style>

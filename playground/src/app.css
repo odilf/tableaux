@@ -1,2 +1,25 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
+
+:root {
+	--theme-color-neutral: oklch(0.8682 0.0499 90.53);
+	--theme-color-primary: oklch(0.3724 0.0499 90.53);
+}
+
+body {
+	background-color: var(--theme-color-neutral);
+	color: var(--theme-color-primary);
+	font-size: 18px;
+}
+
+@theme {
+	--color-neutral: var(--theme-color-neutral);
+
+	--font-serif: 'Libertinus Serif', serif;
+	/* TODO: Not worky */
+	/*--font-math: 'Libertinus Math', 'Libertinus Serif', serif;*/
+}
+
+a:hover {
+	@apply underline;
+}

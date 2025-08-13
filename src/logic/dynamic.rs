@@ -165,7 +165,7 @@ mod wasm {
         }
 
         pub fn tableau(
-            self,
+            &self,
             premises: Vec<String>,
             conclusion: &str,
         ) -> Result<DynPartialTableau, String>
@@ -179,25 +179,35 @@ mod wasm {
             let conclusion = self.parse_expr(conclusion)?;
 
             Ok(DynPartialTableau {
-                tableau: PartialTableau::new(self.logic, premises, conclusion),
+                tableau: PartialTableau::new(self.logic.clone(), premises, conclusion),
             })
         }
 
-        pub fn classical(logic: Classical) -> Self {
+        pub fn classical() -> Self {
             DynLogicWasm {
-                logic: DynLogic::Classical(logic),
+                logic: DynLogic::Classical(Classical {}),
             }
         }
 
-        pub fn modal(logic: Modal) -> Self {
+        pub fn modal() -> Self {
             DynLogicWasm {
-                logic: DynLogic::Modal(logic),
+                logic: DynLogic::Modal(Modal {}),
             }
         }
 
-        pub fn normal_modal(logic: NormalModal) -> Self {
+        pub fn normal_modal(
+            reflexive: bool,
+            symmetric: bool,
+            transitive: bool,
+            extendable: bool,
+        ) -> Self {
             DynLogicWasm {
-                logic: DynLogic::NormalModal(logic),
+                logic: DynLogic::NormalModal(NormalModal {
+                    reflexive,
+                    symmetric,
+                    transitive,
+                    extendable,
+                }),
             }
         }
     }
@@ -210,6 +220,11 @@ mod wasm {
 
         pub fn infer(&mut self) {
             while self.infer_once() {}
+        }
+
+        pub fn inferred(mut self) -> Self {
+            self.infer();
+            self
         }
 
         pub fn root(&self) -> u16 {
@@ -242,40 +257,6 @@ mod wasm {
         #[wasm_bindgen(js_name = toString)]
         pub fn to_string(&self) -> String {
             self.node.to_string()
-        }
-    }
-
-    #[wasm_bindgen]
-    impl Classical {
-        #[wasm_bindgen(constructor)]
-        pub fn new_js() -> Self {
-            Self {}
-        }
-    }
-
-    #[wasm_bindgen]
-    impl Modal {
-        #[wasm_bindgen(constructor)]
-        pub fn new_js() -> Self {
-            Self {}
-        }
-    }
-
-    #[wasm_bindgen]
-    impl NormalModal {
-        #[wasm_bindgen(constructor)]
-        pub fn new_js(
-            reflexive: bool,
-            symmetric: bool,
-            transitive: bool,
-            extendable: bool,
-        ) -> Self {
-            Self {
-                reflexive,
-                symmetric,
-                transitive,
-                extendable,
-            }
         }
     }
 }

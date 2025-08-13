@@ -50,6 +50,8 @@
 		]
 	},
 	"dependencies": {
+		"@fontsource/libertinus-math": "^5.2.1",
+		"@fontsource/libertinus-serif": "^5.2.1",
 		"d3": "^7.9.0"
 	}
 }
