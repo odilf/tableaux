@@ -14,6 +14,6 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<main class="mx-auto flex h-screen max-w-xl flex-col px-2 py-4 font-serif">
+<main class="mx-auto flex h-screen max-w-xl flex-col p-4 font-serif">
 	{@render children?.()}
 </main>

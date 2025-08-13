@@ -1,9 +1,9 @@
 <script>
 	import Tableau from '$lib/Tableau.svelte';
-	import { Classical, Logic } from '$rust';
+	import { Logic } from '$rust';
 
 	const links = [
-		{ name: 'Sandbox', href: '/sandbox', description: "Edit to your heart's contnent" },
+		{ name: 'Sandbox', href: '/sandbox', description: "Edit to your heart's content" },
 		{
 			name: 'Examples',
 			href: '/example',
