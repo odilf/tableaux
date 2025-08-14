@@ -2,14 +2,18 @@
 	import { Node, Tableau } from '$rust';
 	import * as d3 from 'd3';
 
-	const { tableau }: { tableau: Tableau } = $props();
+	let {
+		tableau,
+		width = 540,
+		height = 400
+	}: { tableau: Tableau; width?: number; height?: number } = $props();
 
 	// FIXME: we should get the initial values from the parent or something.
 	// Right now, the height does't really matter and the width is just `--container-xl`
 	// form tailwind, which is a bit bodgy.
 	// let width = $state(576);
-	let width = $state(540);
-	let height = $state(400);
+	// let width = $state(540);
+	// let height = $state(400);
 
 	let root = $derived(
 		d3.hierarchy({ value: tableau.get(tableau.root()), id: tableau.root() }, (node) =>
@@ -52,7 +56,7 @@
 			{@render tree(d3Tree)}
 		</g>
 
-		<g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+		<g stroke="currentColor" stroke-width="1pt" stroke-linecap="round">
 			{#each root.links() as link (link)}
 				<line
 					x1={link.source.x}

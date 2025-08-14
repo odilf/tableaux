@@ -5,13 +5,24 @@
 		logic: Logic;
 		premises: string;
 		conclusion: string;
+		width?: number;
+		height?: number;
 	};
 
-	let { logic = $bindable(), premises = $bindable(), conclusion = $bindable() }: Props = $props();
+	let {
+		logic,
+		premises = $bindable(''),
+		conclusion = $bindable(''),
+		width,
+		height
+	}: Props = $props();
 
 	let tableauResult = $derived.by(() => {
 		try {
-			const t = logic.tableau(premises.split(','), conclusion);
+			const t = logic.tableau(
+				premises.split(',').filter((p) => p.trim().length > 0),
+				conclusion
+			);
 			t.infer();
 			return { ok: t };
 		} catch (error) {
@@ -27,13 +38,13 @@
 	</div>
 
 	<div
-		class="grid grid-cols-[1fr_auto_1fr] place-content-center place-items-center gap-2 font-math"
+		class="font-math grid grid-cols-[1fr_auto_1fr] place-content-center place-items-center gap-2"
 	>
 		<textarea
 			id="premises"
 			name="premises"
 			rows="1"
-			class="w-full text-center"
+			class="w-full rounded border text-center"
 			bind:value={premises}
 		>
 		</textarea>
@@ -42,7 +53,7 @@
 			id="conclusion"
 			name="conclusion"
 			rows="1"
-			class="w-full text-center"
+			class="w-full rounded border text-center"
 			bind:value={conclusion}
 		>
 		</textarea>
@@ -50,7 +61,7 @@
 </div>
 
 {#if tableauResult.ok !== undefined}
-	<Tableau tableau={tableauResult.ok} />
+	<Tableau tableau={tableauResult.ok} {width} {height} />
 {:else if 'error' in tableauResult}
 	<div>
 		Error: <pre>{tableauResult.error}</pre>

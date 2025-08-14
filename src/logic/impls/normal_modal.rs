@@ -4,7 +4,8 @@ use crate::{
     Logic, PartialTableau,
     logic::{
         InferenceRule,
-        modal::{Expr, Node, World},
+        lexer::Symbol,
+        modal::{Expr, Modal, Node, World},
     },
     tableau::Branch,
 };
@@ -279,6 +280,7 @@ impl NormalModal {
         }
     }
 }
+
 /// Kρ
 pub const T: NormalModal = NormalModal::new().reflexive();
 
@@ -326,3 +328,20 @@ impl cmp::PartialEq for NormalModal {
 }
 
 impl cmp::Eq for NormalModal {}
+
+impl NormalModal {
+    /// Symbols used in classical logic.
+    pub const fn symbols() -> &'static [Symbol] {
+        Modal::symbols()
+    }
+}
+
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+impl NormalModal {
+    /// Symbols used in classical logic.
+    #[wasm_bindgen(js_name = symbols)]
+    pub fn symbols_wasm() -> Vec<Symbol> {
+        Self::symbols().to_vec()
+    }
+}

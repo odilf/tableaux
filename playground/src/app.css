@@ -3,7 +3,9 @@
 
 :root {
 	--theme-color-neutral: oklch(0.8682 0.0499 90.53);
+	--theme-color-neutral-secondary: oklch(0.5682 0.0499 90.53);
 	--theme-color-primary: oklch(0.3724 0.0499 90.53);
+	--theme-color-secondary: oklch(0.9994 0 200.53);
 }
 
 body {
@@ -14,6 +16,9 @@ body {
 
 @theme {
 	--color-neutral: var(--theme-color-neutral);
+	--color-neutral-secondary: var(--theme-color-neutral-secondary);
+	--color-primary: var(--theme-color-primary);
+	--color-secondary: var(--theme-color-secondary);
 
 	--font-serif: 'Libertinus Serif', serif;
 	/* TODO: Not worky */

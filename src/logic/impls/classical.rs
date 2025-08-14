@@ -2,6 +2,7 @@ use std::fmt;
 use std::str::FromStr;
 
 use crate::logic::InferenceRule;
+use crate::logic::lexer::Symbol;
 use crate::tableau::{Branch, Tableau};
 use crate::{Logic, PartialTableau};
 
@@ -81,6 +82,29 @@ impl Logic for Classical {
     }
 }
 
+impl Classical {
+    /// Symbols used in classical logic.
+    pub const fn symbols() -> &'static [Symbol] {
+        &[
+            Symbol::Not,
+            Symbol::And,
+            Symbol::Or,
+            Symbol::MatImpl,
+            Symbol::MatEquiv,
+        ]
+    }
+}
+
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+impl Classical {
+    /// Symbols used in classical logic.
+    #[wasm_bindgen(js_name = symbols)]
+    pub fn symbols_wasm() -> Vec<Symbol> {
+        Self::symbols().to_vec()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Expr {
     // TODO: Use some kind of small string type
@@ -128,7 +152,7 @@ impl FromStr for Expr {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        use crate::logic::lexer::*;
+        use crate::logic::lexer::{Symbol, ident};
         use winnow::{
             ModalResult, Parser,
             ascii::space0,
@@ -139,9 +163,9 @@ impl FromStr for Expr {
 
         fn expr_single<'a>(input: &mut &'a str) -> ModalResult<Expr> {
             let main = alt((
-                delimited(left_paren, expr, right_paren),
+                delimited('(', expr, ')'),
                 ident.map(|name: &str| Expr::Const(name.to_string().into_boxed_str())),
-                preceded(not, expr_single).map(|expr| Expr::Not(Box::new(expr))),
+                preceded(Symbol::Not.parser(), expr_single).map(|expr| Expr::Not(Box::new(expr))),
             ));
 
             delimited(space0, main, space0).parse_next(input)
@@ -149,11 +173,13 @@ impl FromStr for Expr {
 
         fn expr<'a>(input: &mut &'a str) -> ModalResult<Expr> {
             let main = alt((
-                seq!(expr_single, and, expr).map(|(a, _, b)| Expr::And(Box::new(a), Box::new(b))),
-                seq!(expr_single, or, expr).map(|(a, _, b)| Expr::Or(Box::new(a), Box::new(b))),
-                seq!(expr_single, mat_impl, expr)
+                seq!(expr_single, Symbol::And.parser(), expr)
+                    .map(|(a, _, b)| Expr::And(Box::new(a), Box::new(b))),
+                seq!(expr_single, Symbol::Or.parser(), expr)
+                    .map(|(a, _, b)| Expr::Or(Box::new(a), Box::new(b))),
+                seq!(expr_single, Symbol::MatImpl.parser(), expr)
                     .map(|(a, _, b)| Expr::MatImpl(Box::new(a), Box::new(b))),
-                seq!(expr_single, mat_equiv, expr)
+                seq!(expr_single, Symbol::MatEquiv.parser(), expr)
                     .map(|(a, _, b)| Expr::MatEquiv(Box::new(a), Box::new(b))),
                 expr_single,
             ));
