@@ -3,16 +3,16 @@
 	import { Logic } from '$rust';
 
 	const links = [
-		{ name: 'Sandbox', href: '/sandbox', description: "Edit to your heart's content" },
+		{ name: 'Sandbox', href: '/sandbox', description: "Edit to your heart's content." },
 		{
 			name: 'Examples',
 			href: '/example',
-			description: `From Graham Priest's <em>Introduction to Non-Classical Logics</em>`
+			description: `From Graham Priest's <em>Introduction to Non-Classical Logics</em>.`
 		},
 		{
 			name: 'About',
 			href: '/about',
-			description: 'How was this made'
+			description: 'What are tableaux and how was this made.'
 		}
 	];
 
@@ -23,7 +23,7 @@
 	<h1 class="mt-8 mb-2 text-5xl font-bold">Tableaux playground</h1>
 	<p class="opacity-80">For non-classical logics</p>
 
-	<ul class="mt-4 flex flex-col gap-2 leading-none">
+	<ul class="mt-4 flex flex-col gap-3 leading-none">
 		{#each links as { name, href, description } (href)}
 			<li>
 				<a {href}>
