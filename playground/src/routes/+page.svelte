@@ -7,7 +7,7 @@
 		{
 			name: 'Examples',
 			href: '/example',
-			description: `From Graham Priest's <em>Introduction to Non-Classical Logics</em>.`
+			description: "From Graham Priest's <em>Introduction to Non-Classical Logics</em>."
 		},
 		{
 			name: 'About',
@@ -19,7 +19,7 @@
 	const tableau = Logic.classical().tableau(['p > q', 'q > r'], 'p > r').inferred();
 </script>
 
-<main class="mx-auto flex h-screen max-w-xl flex-col p-4 font-serif">
+<main class="column flex h-screen flex-col">
 	<h1 class="mt-8 mb-2 text-5xl font-bold">Tableaux playground</h1>
 	<p class="opacity-80">For non-classical logics</p>
 

@@ -1,31 +1,9 @@
 <script lang="ts">
+	import { classObject, displayName, logics, type LogicKind } from '$lib/logic';
 	import TableauEdit from '$lib/TableauEdit.svelte';
-	import {
-		Classical,
-		Logic,
-		Modal,
-		NormalModal,
-		symbolAsciiStr,
-		symbolChar,
-		symbolName
-	} from '$rust';
+	import { Logic, symbolAsciiStr, symbolChar, symbolName } from '$rust';
 	import { expoOut } from 'svelte/easing';
 	import { fly, slide } from 'svelte/transition';
-
-	const logics = ['classical', 'modal', 'normalModal'] as const;
-	type LogicKind = (typeof logics)[number];
-
-	const classObject = {
-		classical: Classical,
-		modal: Modal,
-		normalModal: NormalModal
-	} satisfies Record<LogicKind, unknown>;
-
-	const displayName = {
-		classical: 'Classical',
-		modal: 'Modal',
-		normalModal: 'Normal Modal'
-	} satisfies Record<LogicKind, string>;
 
 	let selected: LogicKind = $state('classical');
 
@@ -47,9 +25,9 @@
 	});
 </script>
 
-<main class="flex h-screen font-serif">
+<main class="flex h-screen">
 	<div class="text-md flex w-50 flex-col bg-neutral-secondary p-3 text-secondary">
-		<a href="/" class="mb-4 opacity-50">⊢ Home </a>
+		<a href="/" class="mb-4 opacity-50">⟞ Home </a>
 		<h2 class="mb-2 text-3xl font-bold">Logic type</h2>
 		<ul class="flex flex-col gap-2">
 			{#each logics as logic (logic)}

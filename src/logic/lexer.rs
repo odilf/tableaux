@@ -5,7 +5,7 @@ mod unicode {
     pub const AND: &str = "∧";
     pub const OR: &str = "∨";
     pub const MAT_IMPL: char = '⊃';
-    pub const MAT_EQUIV: char = '≡';
+    pub const MAT_EQUIV: &str = "≡";
     pub const POSSIB: &str = "◇";
     pub const NECESS: &str = "□";
 }
@@ -34,7 +34,7 @@ impl Symbol {
             Symbol::And => AND.chars().next().unwrap(),
             Symbol::Or => OR.chars().next().unwrap(),
             Symbol::MatImpl => MAT_IMPL,
-            Symbol::MatEquiv => MAT_EQUIV,
+            Symbol::MatEquiv => MAT_EQUIV.chars().next().unwrap(),
             Symbol::Possib => POSSIB.chars().next().unwrap(),
             Symbol::Necess => NECESS.chars().next().unwrap(),
         }
@@ -46,7 +46,7 @@ impl Symbol {
             Symbol::And => "&&",
             Symbol::Or => "||",
             Symbol::MatImpl => ">",
-            Symbol::MatEquiv => "=",
+            Symbol::MatEquiv => "==",
             Symbol::Possib => "<>",
             Symbol::Necess => "[]",
         }
@@ -70,10 +70,27 @@ impl Symbol {
             Symbol::And => alt([AND, "&&"]).map(|_| ()).parse_next(input),
             Symbol::Or => alt([OR, "||"]).map(|_| ()).parse_next(input),
             Symbol::MatImpl => alt([MAT_IMPL, '>']).map(|_| ()).parse_next(input),
-            Symbol::MatEquiv => alt([MAT_EQUIV, '=']).map(|_| ()).parse_next(input),
+            Symbol::MatEquiv => alt([MAT_EQUIV, "=="]).map(|_| ()).parse_next(input),
             Symbol::Possib => alt([POSSIB, "<>"]).map(|_| ()).parse_next(input),
             Symbol::Necess => alt([NECESS, "[]"]).map(|_| ()).parse_next(input),
         }
+    }
+
+    pub fn iter() -> impl Iterator<Item = Symbol> {
+        [
+            Symbol::Not,
+            Symbol::And,
+            Symbol::Or,
+            Symbol::MatEquiv,
+            Symbol::Possib,
+            Symbol::Necess,
+            // NOTE: Material implication goes after <> because in ascii it's >
+            // and we want to first replace the <> and after the > otherwise we
+            // get wrong symbols.
+            // FIXME: This does work but is very fragile...
+            Symbol::MatImpl,
+        ]
+        .into_iter()
     }
 }
 
@@ -105,5 +122,10 @@ mod wasm {
     #[wasm_bindgen(js_name = symbolName)]
     pub fn symbol_name(p: Symbol) -> String {
         p.name().to_string()
+    }
+
+    #[wasm_bindgen(js_name = symbolIter)]
+    pub fn symbol_iter() -> Vec<Symbol> {
+        Symbol::iter().collect()
     }
 }

@@ -1,0 +1,162 @@
+# Schema: "x.y.z" keys and array of [`premises`, `conclusion`] where premises is a a single string, comma separated.
+
+[1.4.8]
+conclusion = "!(((A>B) && (A>C)) > (A > (B && C)))"
+
+[1.5.1]
+premises = "(p > q) || (r > q)"
+conclusion = "(p || r) > q"
+holds = false
+
+[1.exercise.1.a]
+premises = "p > q, r > q"
+conclusion = "(p || r) > q"
+
+[1.exercise.1.b]
+premises = "p > (q && r), !r"
+conclusion = "!p"
+
+[1.exercise.1.c]
+conclusion = "((p > q) > q) > q"
+
+[1.exercise.1.d]
+conclusion = "((p > q) && (!p > q)) > !p"
+
+[1.exercise.1.e]
+premises = "p == (q == r)"
+conclusion = "(p == q) == r"
+
+[1.exercise.1.f]
+premises = "p == (q == r)"
+conclusion = "(p == q) == r"
+
+[1.exercise.1.g]
+premises = "p && (!r || s), !(q > s)"
+conclusion = "r"
+
+[1.exercise.1.h]
+conclusion = "(p > (q > r)) > (q > (p > r))"
+
+[1.exercise.1.i]
+premises = "!(p && !q) || r, p > (r == s)"
+conclusion = "p == q"
+
+[1.exercise.1.j]
+premises = "p == !!q, !q > (r && !s), s > (q || q)"
+conclusion = "(s && q) > p"
+
+[2.4.6.i]
+premises = "[](A > B) && [](B > C)"
+conclusion = "[]A > C"
+
+[2.4.6.ii]
+conclusion = "<>(A && B) > (<>A && <>B)"
+
+[2.4.6.iii]
+conclusion = "(<>p && <>!q) > <>[]<>p"
+holds = false
+
+[2.exercise.2.a]
+conclusion = "([]A && []B) > [](A && B)"
+
+[2.exercise.2.b]
+conclusion = "([]A || []B) > [](A || B)"
+
+[2.exercise.2.c]
+conclusion = "[]A == !<>!A"
+
+[2.exercise.2.d]
+conclusion = "<>A == ![]! A"
+
+[2.exercise.2.e]
+conclusion = "<>(A && B) > (<>A && <>B)"
+
+[2.exercise.2.f]
+conclusion = "<>(A || B) > (<>A || <>B)"
+
+[2.exercise.2.g]
+premises = "[](A > B)"
+conclusion = "<>A > <>B"
+
+[2.exercise.2.h]
+premises = "[]A, <>B"
+conclusion = "<>(A && B)"
+
+[2.exercise.2.i]
+conclusion = "[]A == [](!A > A)"
+
+[2.exercise.2.j]
+conclusion = "[]A > [](B > A)"
+
+[2.exercise.2.k]
+conclusion = "!<>B > [](B > A)"
+
+[2.exercise.2.l]
+conclusion = "[](p || q) > ([]p || []q)"
+holds = false
+
+[2.exercise.2.m]
+premises = "[]p, []!q"
+conclusion = "[](p > q)"
+
+[2.exercise.2.n]
+premises = "<>p, <>q"
+conclusion = "<>(p && q)"
+holds = false
+
+[2.exercise.2.o]
+conclusion = "[]p > p"
+holds = false
+
+[2.exercise.2.p]
+conclusion = "[]p > <>p"
+holds = false
+
+[2.exercise.2.q]
+premises = "p"
+conclusion = "[]p"
+holds = false
+
+[2.exercise.2.r]
+conclusion = "[]p > [][]p"
+holds = false
+
+[2.exercise.2.s]
+conclusion = "<>p > <><>p"
+holds = false
+
+[2.exercise.2.t]
+conclusion = "p > []<>p"
+holds = false
+
+[2.exercise.2.u]
+conclusion = "<>p > []<>p"
+holds = false
+
+[2.exercise.2.v]
+conclusion = "<>(p || !p)"
+holds = false
+
+[3.3.3]
+conclusion = "[]p > p"
+kind = { relfexive = true }
+
+[3.3.4]
+conclusion = "p > []<>p"
+kind = { symmetric = true }
+
+[3.3.5]
+conclusion = "[]p > [][]p"
+kind = { transitive = true }
+
+[3.4.4]
+conclusion = "[]p > <>p"
+kind = { extendable = true }
+
+[3.4.7]
+conclusion = "!(<>p && []<>p)"
+kind = { transitive = true }
+
+[3.5.3]
+conclusion = "<>A > <><>A"
+kind = { reflexive = true, symmetric = true, transitive = true }

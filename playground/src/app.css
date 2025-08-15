@@ -12,6 +12,7 @@ body {
 	background-color: var(--theme-color-neutral);
 	color: var(--theme-color-primary);
 	font-size: 18px;
+	@apply font-serif;
 }
 
 @theme {
@@ -27,4 +28,10 @@ body {
 
 a:hover {
 	@apply underline;
+}
+
+@layer components {
+	.column {
+		@apply mx-auto max-w-xl px-2 pt-4 pb-8;
+	}
 }
