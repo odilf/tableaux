@@ -21,9 +21,9 @@ impl Logic for Classical {
     type Node = Expr;
     type Expr = Expr;
 
-    fn infer(&self, branch: impl Branch<Self>) -> InferenceRule<Self::Node> {
+    fn infer(&self, node: &Expr, _branch: impl Branch<Self>) -> InferenceRule<Self::Node> {
         use InferenceRule as IR;
-        match branch.leaf() {
+        match node {
             Expr::Const(_) => IR::None,
             Expr::Not(p) => match p.as_ref() {
                 Expr::Const(_) => IR::none(),

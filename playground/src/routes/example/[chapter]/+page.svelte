@@ -10,7 +10,7 @@
 <main class="column">
 	<Back href="/example" />
 	<h1 class="mb-2 text-3xl font-bold">
-		Chapter {chapter}: {displayName[chapterLogics[parseInt(chapter) - 1]]} logic
+		Chapter {chapter}: {displayName[chapterLogics[chapter]]} logic
 	</h1>
 
 	<ChapterExamples chapter={parseInt(chapter)} {chapterExamples} />

@@ -48,13 +48,15 @@ export function logicOfChapter(chapter: number, example: Example) {
 		return Logic.modal();
 	} else if (chapter === 3) {
 		const { reflexive, symmetric, transitive, extendable } = v.parse(normalModalKind, example.kind);
-		return Logic.normal_modal(
+		return Logic.normalModal(
 			reflexive ?? false,
 			symmetric ?? false,
 			transitive ?? false,
 			extendable ?? false
 		);
+	} else if (isNaN(chapter)) {
+		throw new Error('Chapter was NaN');
 	} else {
-		throw new Error('Invalid chapter');
+		throw new Error(`Invalid chapter: ${chapter}`);
 	}
 }

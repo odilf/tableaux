@@ -19,9 +19,9 @@ pub struct TableauNode<V> {
     parent: Option<NodeId>,
     // TODO: Use a smallvec type
     pub(crate) children: Vec<NodeId>,
-    live_children: u8,
+    pub(crate) live_children: u8,
     // TODO: Add death reason.
-    death_reason: Option<()>,
+    pub(crate) death_reason: Option<()>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -106,6 +106,8 @@ impl<L: Logic> Tableau<L> {
 }
 
 impl<L: Logic> PartialTableau<L> {
+    /// Carries out the entire inference process and returns a completed
+    /// tableau.
     pub fn infer(mut self) -> Tableau<L> {
         while let Some(()) = self.infer_once() {}
 
@@ -116,30 +118,28 @@ impl<L: Logic> PartialTableau<L> {
         }
     }
 
-    /// Infers the first prioritized uninferred node.
+    /// Adds the inference result of a node to the tableau.
     ///
-    /// Returns `Some(())` if an inference was made, `None` otherwise.
-    pub fn infer_once(&mut self) -> Option<()> {
-        let node_id = self.uninferred_nodes.pop()?.node_id;
-        let branch = self.branch(node_id);
-
+    /// Generally you should use [`Self::infer_once`] instead.
+    pub fn infer_node(&mut self, node: NodeId) -> Option<()> {
         let initial_node_len = self.nodes.len();
-        // NOTE: In all cases, we have to check branch liveness at the end in
-        // splits because we need to add both before killing other branches,
-        // but we need to check on the loop in chains to make sure we don't
-        // expand extra nodes if it's dead.
-        use crate::logic::InferenceRule as IR;
-        match self.logic.infer(branch) {
-            IR::None => (),
-            IR::Single(p) => {
-                for leaf in self.live_leaves() {
+
+        for leaf in self.live_leaves() {
+            let branch = self.branch(leaf);
+
+            // NOTE: In all cases, we have to check branch liveness at the end
+            // in splits because we need to add both before killing other
+            // branches, but we need to check on the loop in chains to make
+            // sure we don't expand extra nodes if it's dead.
+            use crate::logic::InferenceRule as IR;
+            match self.logic.infer(&self.get(node).value, branch) {
+                IR::None => (),
+                IR::Single(p) => {
                     let new_node = self.add_orphan(p.clone());
                     self.bind_child(leaf, new_node);
                     self.check_branch_liveness(new_node);
                 }
-            }
-            IR::Split([left, right]) => {
-                for leaf in self.live_leaves() {
+                IR::Split([left, right]) => {
                     let new_left = self.add_orphan(left.clone());
                     self.bind_child(leaf, new_left);
 
@@ -149,31 +149,28 @@ impl<L: Logic> PartialTableau<L> {
                     self.check_branch_liveness(new_left);
                     self.check_branch_liveness(new_right);
                 }
-            }
-            IR::Chain(ps) => {
-                if ps.is_empty() {
-                    return Some(());
-                }
-                for leaf in self.live_leaves() {
-                    let new_nodes = ps
-                        .iter()
-                        .map(|p| self.add_orphan(p.clone()))
-                        .collect::<Vec<_>>();
+                IR::Chain(ps) => {
+                    if ps.is_empty() {
+                        ()
+                    } else {
+                        let new_nodes = ps
+                            .iter()
+                            .map(|p| self.add_orphan(p.clone()))
+                            .collect::<Vec<_>>();
 
-                    self.bind_child(leaf, new_nodes[0]);
-                    self.check_branch_liveness(new_nodes[0]);
+                        self.bind_child(leaf, new_nodes[0]);
+                        self.check_branch_liveness(new_nodes[0]);
 
-                    for i in 1..new_nodes.len() {
-                        self.bind_child(new_nodes[i - 1], new_nodes[i]);
-                        let died = self.check_branch_liveness(new_nodes[i]);
-                        if died {
-                            break;
+                        for i in 1..new_nodes.len() {
+                            self.bind_child(new_nodes[i - 1], new_nodes[i]);
+                            let died = self.check_branch_liveness(new_nodes[i]);
+                            if died {
+                                break;
+                            }
                         }
                     }
                 }
-            }
-            IR::SplitAndChain(chains) => {
-                for leaf in self.live_leaves() {
+                IR::SplitAndChain(chains) => {
                     for [a, b] in &chains {
                         let new_a = self.add_orphan(a.clone());
                         self.bind_child(leaf, new_a);
@@ -186,7 +183,7 @@ impl<L: Logic> PartialTableau<L> {
                     }
                 }
             }
-        };
+        }
 
         // NOTE: This depends on the implementation of `Self::add_orphan`.
         // Thankfully it's pretty logical but just watch out if that tries to
@@ -197,6 +194,16 @@ impl<L: Logic> PartialTableau<L> {
         }
 
         Some(())
+    }
+
+    /// Infers the first prioritized uninferred node.
+    ///
+    /// Returns `Some(())` if an inference was made, `None` otherwise.
+    ///
+    /// See also [`Self::infer`].
+    pub fn infer_once(&mut self) -> Option<()> {
+        let node_id = self.uninferred_nodes.pop()?.node_id;
+        self.infer_node(node_id)
     }
 
     fn check_branch_liveness(&mut self, leaf: NodeId) -> bool {
@@ -281,6 +288,19 @@ impl<L: Logic> PartialTableau<L> {
         &mut self.nodes[node_id.index as usize]
     }
 
+    pub fn depth_of(&self, node_id: NodeId) -> u16 {
+        self.get(node_id)
+            .children
+            .iter()
+            .map(|child| self.depth_of(*child) + 1)
+            .max()
+            .unwrap_or(0)
+    }
+
+    pub fn depth(&self) -> u16 {
+        self.depth_of(self.root)
+    }
+
     fn add_orphan(&mut self, node_value: L::Node) -> NodeId {
         let priority = self.logic.priority(&node_value);
         let node = TableauNode {
@@ -361,8 +381,7 @@ impl<V> TableauNode<V> {
 pub trait Branch<L: Logic> {
     fn leaf(&self) -> &L::Node;
 
-    /// Iterator over ancestors of the branch. This method starts at the parent
-    /// of the leaf; that it, it does not return the leaf.
+    /// Iterator over ancestors of the branch.
     fn ancestors<'t>(&'t self) -> impl Iterator<Item = &'t L::Node>
     where
         L::Node: 't;
@@ -379,15 +398,6 @@ pub trait Branch<L: Logic> {
         self.ancestors()
             .find(|&ancestor| ancestor == node)
             .is_some()
-    }
-
-    /// Iterator over all nodes in the branch. This method differs from
-    /// [`Self::ancestors`] in that it includes the leaf.
-    fn iter<'t>(&'t self) -> impl Iterator<Item = &'t L::Node>
-    where
-        L::Node: 't,
-    {
-        std::iter::once(self.leaf()).chain(self.ancestors())
     }
 
     fn map<'t, L2: Logic, F: Fn(&L::Node) -> &L2::Node>(
@@ -435,8 +445,9 @@ impl<'t, L: Logic> Iterator for AncestorIter<'t, L> {
     type Item = &'t L::Node;
     fn next(&mut self) -> Option<Self::Item> {
         let parent = self.tableau.get(self.current).parent?;
+        let current = self.current;
         self.current = parent;
-        Some(&self.tableau.get(parent).value)
+        Some(&self.tableau.get(current).value)
     }
 }
 

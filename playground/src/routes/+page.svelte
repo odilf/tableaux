@@ -16,7 +16,11 @@
 		}
 	];
 
-	const tableau = Logic.classical().tableau(['p > q', 'q > r'], 'p > r').inferred();
+	const premises = ['□(A ⊃ B)', '□(B ⊃ C)'];
+	const conclusion = '□(A ⊃ C)';
+	// const premises = [];
+	// const conclusion = '(□(A ⊃ B) && □(B ⊃ C)) > □(A ⊃ C)';
+	const tableau = Logic.modal().tableau(premises, conclusion).inferred();
 </script>
 
 <main class="column flex h-screen flex-col">
@@ -37,12 +41,21 @@
 
 	<div class="flex-1"></div>
 
-	<a href="/todo">
-		<Tableau {tableau} />
-		<p class="text-center text-balance opacity-50">
-			Example: Transitivity across worlds in modal logic
-		</p>
-	</a>
+	<div class="font-math mb-4 text-center text-3xl">
+		{premises}
+		⊢
+		{conclusion}
+	</div>
+	<Tableau
+		{tableau}
+		width={570}
+		editable={true}
+		margin={{ top: 12, bottom: 12, left: 0, right: 0 }}
+	/>
+	<p class="text-center text-balance opacity-50">
+		Example: Transitivity across worlds in modal logic. <br />
+		<a href="/http://localhost:5173/example/2/4/6"> Open in playground </a>
+	</p>
 
 	<div class="flex-1"></div>
 </main>

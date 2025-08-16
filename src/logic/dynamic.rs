@@ -44,19 +44,23 @@ macro_rules! make_dyn_logic {
             ),*
         }
 
-
         impl Logic for DynLogic {
             type Expr = DynExpr;
             type Node = DynNode;
 
-            fn infer(&self, branch: impl Branch<Self>) -> InferenceRule<Self::Node> {
+            fn infer(&self, node: &Self::Node, branch: impl Branch<Self>) -> InferenceRule<Self::Node> {
                 match self {
                     $(
                         DynLogic::$name(logic) => logic
-                            .infer(branch.map(|node| match node {
-                                DynNode::$name(node) => node,
-                                _ => unreachable!(),
-                            }))
+                            .infer(
+                                match node {
+                                    DynNode::$name(node) => node,
+                                    _ => unreachable!(),
+                                },
+                                branch.map(|node| match node {
+                                    DynNode::$name(node) => node,
+                                    _ => unreachable!(),
+                                }))
                             .map(DynNode::$name),
                     )*
                 }
@@ -94,6 +98,17 @@ macro_rules! make_dyn_logic {
                             DynExpr::$name(expr) => expr,
                             _ => unreachable!(),
                         })),
+                    )*
+                }
+            }
+
+            fn priority(&self, node: &Self::Node) -> u16 {
+                match self {
+                    $(
+                        DynLogic::$name(logic) => logic.priority(match node {
+                            DynNode::$name(node) => node,
+                            _ => unreachable!(),
+                        }),
                     )*
                 }
             }
@@ -195,6 +210,7 @@ mod wasm {
             }
         }
 
+        #[wasm_bindgen(js_name = normalModal)]
         pub fn normal_modal(
             reflexive: bool,
             symmetric: bool,
@@ -214,6 +230,12 @@ mod wasm {
 
     #[wasm_bindgen(js_class = Tableau)]
     impl DynPartialTableau {
+        #[wasm_bindgen(js_name = inferNode)]
+        pub fn infer_node(&mut self, node_id: u16) -> bool {
+            self.tableau.infer_node(NodeId { index: node_id }).is_some()
+        }
+
+        #[wasm_bindgen(js_name = inferOnce)]
         pub fn infer_once(&mut self) -> bool {
             self.tableau.infer_once().is_some()
         }
@@ -237,6 +259,10 @@ mod wasm {
             }
         }
 
+        pub fn depth(&self) -> u16 {
+            self.tableau.depth()
+        }
+
         pub fn children(&self, id: u16) -> Box<[u16]> {
             self.tableau
                 .get(NodeId { index: id })
@@ -249,6 +275,18 @@ mod wasm {
         #[wasm_bindgen(js_name = toString)]
         pub fn to_string(&self) -> String {
             self.tableau.to_string()
+        }
+
+        #[wasm_bindgen(js_name = isDead)]
+        pub fn is_dead(&self, node_id: u16) -> bool {
+            self.tableau
+                .get(NodeId { index: node_id })
+                .death_reason
+                .is_some()
+        }
+
+        pub fn holds(&self) -> bool {
+            self.tableau.get(self.tableau.root).live_children == 0
         }
     }
 

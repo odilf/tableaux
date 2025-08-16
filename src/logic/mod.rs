@@ -13,7 +13,7 @@ pub trait Logic {
     type Node: Clone;
     type Expr;
 
-    fn infer(&self, branch: impl Branch<Self>) -> InferenceRule<Self::Node>
+    fn infer(&self, node: &Self::Node, branch: impl Branch<Self>) -> InferenceRule<Self::Node>
     where
         Self: Sized;
 

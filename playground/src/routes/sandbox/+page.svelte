@@ -18,7 +18,7 @@
 		} else if (selected === 'modal') {
 			return Logic.modal();
 		} else if (selected === 'normalModal') {
-			return Logic.normal_modal(reflexive, symmetric, transitive, extendable);
+			return Logic.normalModal(reflexive, symmetric, transitive, extendable);
 		} else {
 			throw new Error('Unreachable');
 		}

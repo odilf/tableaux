@@ -5,6 +5,9 @@
 	import '@fontsource/libertinus-serif/400.css';
 	import '@fontsource/libertinus-serif/600.css';
 	import '@fontsource/libertinus-serif/700.css';
+	import '@fontsource/libertinus-serif/400-italic.css';
+	import '@fontsource/libertinus-serif/600-italic.css';
+	import '@fontsource/libertinus-serif/700-italic.css';
 	import '@fontsource/libertinus-math';
 
 	let { children } = $props();

@@ -22,7 +22,7 @@
 	{#each Object.entries(data.examples) as [chapter, chapterExamples] (chapter)}
 		<h2 class="mt-8 text-2xl font-bold">
 			<a href="/example/{chapter}">
-				Chapter {chapter}: {displayName[chapterLogics[parseInt(chapter) - 1]]} logic
+				Chapter {chapter}: {displayName[chapterLogics[chapter]]} logic
 			</a>
 		</h2>
 

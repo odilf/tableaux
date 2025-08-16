@@ -30,10 +30,10 @@ impl Logic for NormalModal {
     type Node = Node;
     type Expr = Expr;
 
-    fn infer(&self, branch: impl Branch<Self>) -> InferenceRule<Self::Node> {
+    fn infer(&self, node: &Self::Node, branch: impl Branch<Self>) -> InferenceRule<Self::Node> {
         use InferenceRule as IR;
 
-        let inferrence = match branch.leaf() {
+        let inferrence = match node {
             Node::Expr { expr, world } => {
                 let world = *world;
 
@@ -143,7 +143,7 @@ impl Logic for NormalModal {
             // Worlds that don't access any new worlds
             let mut maybe_leaf_worlds = HashSet::new();
             let mut non_leaf_worlds = HashSet::new();
-            for node in branch.iter() {
+            for node in branch.ancestors() {
                 match node {
                     Node::Expr { world, .. } => {
                         maybe_leaf_worlds.insert(*world);
@@ -160,7 +160,10 @@ impl Logic for NormalModal {
                 return IR::none();
             };
 
-            let max_so_far = branch.iter().filter_map(|ancestor| ancestor.world()).max();
+            let max_so_far = branch
+                .ancestors()
+                .filter_map(|ancestor| ancestor.world())
+                .max();
             let fresh_world = max_so_far.map_or(World::ZERO, |i| i.next());
 
             return IR::single(Node::Relation {
@@ -208,7 +211,7 @@ impl Logic for NormalModal {
             for leaf in tableau.live_leaves() {
                 let branch = tableau.branch(leaf);
                 let unique_worlds = branch
-                    .iter()
+                    .ancestors()
                     .filter_map(|node| node.world())
                     .collect::<HashSet<_>>();
                 drop(branch);

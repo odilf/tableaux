@@ -12,7 +12,11 @@ export const classObject = {
 export const displayName = {
 	classical: 'Classical',
 	modal: 'Basic modal',
-	normalModal: 'Normal Modal'
+	normalModal: 'Normal modal'
 } satisfies Record<LogicKind, string>;
 
-export const chapterLogics = ['classical', 'modal', 'normalModal'] as const;
+export const chapterLogics: Record<string, LogicKind> = {
+	'1': 'classical',
+	'2': 'modal',
+	'3': 'normalModal'
+};

@@ -21,10 +21,10 @@ impl Logic for Modal {
     type Node = Node;
     type Expr = Expr;
 
-    fn infer(&self, branch: impl Branch<Self>) -> InferenceRule<Self::Node> {
+    fn infer(&self, node: &Self::Node, branch: impl Branch<Self>) -> InferenceRule<Self::Node> {
         use InferenceRule as IR;
 
-        let Node::Expr { expr, world } = branch.leaf() else {
+        let Node::Expr { expr, world } = node else {
             // Relations don't do inferrence in basic modal logic.
             return IR::none();
         };
@@ -42,8 +42,8 @@ impl Logic for Modal {
                 Expr::MatEquiv(p, q) => {
                     IR::split_and_chain([p.not(), *q.clone()], [*p.clone(), q.not()])
                 }
-                Expr::Possibility(p) => IR::Single(Expr::Necessity(Box::new(p.not()))),
-                Expr::Necessity(p) => IR::Single(Expr::Possibility(Box::new(p.not()))),
+                Expr::Possibility(p) => IR::single(Expr::Necessity(Box::new(p.not()))),
+                Expr::Necessity(p) => IR::single(Expr::Possibility(Box::new(p.not()))),
             },
             Expr::And(p, q) => IR::chain(vec![*p.clone(), *q.clone()]),
             Expr::Or(p, q) => IR::split(*p.clone(), *q.clone()),
@@ -112,6 +112,22 @@ impl Logic for Modal {
             world: World::ZERO,
         }
     }
+
+    fn priority(&self, node: &Self::Node) -> u16 {
+        match node {
+            Node::Expr { expr, .. } => match expr {
+                Expr::Const(_) => 5,
+                Expr::Not(_) => 5,
+                Expr::And(_, _) => 7,
+                Expr::Or(_, _) => 5,
+                Expr::MatImpl(_, _) => 5,
+                Expr::MatEquiv(_, _) => 2,
+                Expr::Necessity(_) => 0,
+                Expr::Possibility(_) => 1000,
+            },
+            Node::Relation { .. } => 100,
+        }
+    }
 }
 
 impl Modal {
@@ -172,6 +188,10 @@ impl Node {
         }
     }
 
+    /// What world can the node access, assuming we start from the given world.
+    ///
+    /// Returns `None` if the node is not a relation or if the given world is
+    /// not the source world.
     pub fn accessible_world_from(&self, world: World) -> Option<World> {
         match self {
             Self::Relation { from, to } if *from == world => Some(*to),
@@ -179,6 +199,10 @@ impl Node {
         }
     }
 
+    /// Interpretation of a variable, if any.
+    ///
+    /// Returns a `(name, truth_value, world)` tuple if the node is a constant
+    /// expression, [`None`] otherwise.
     pub fn interpretation(&self) -> Option<(&str, bool, World)> {
         match self {
             Self::Expr { expr, world } => match expr {
