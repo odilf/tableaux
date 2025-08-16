@@ -1,20 +1,19 @@
 <script lang="ts">
 	import { Logic } from '$rust';
 	import Tableau from './Tableau.svelte';
+	import type { ComponentProps } from 'svelte';
+
 	type Props = {
 		logic: Logic;
 		premises: string;
 		conclusion: string;
-		width?: number;
-		height?: number;
-	};
+	} & Omit<ComponentProps<typeof Tableau>, 'tableau' | 'editable'>;
 
 	let {
 		logic,
 		premises = $bindable(''),
 		conclusion = $bindable(''),
-		width,
-		height
+		...tableauProps
 	}: Props = $props();
 
 	let tableauResult = $derived.by(() => {
@@ -48,7 +47,13 @@
 			bind:value={premises}
 		>
 		</textarea>
-		<div class="font-bold">⊢</div>
+		<div class="font-bold">
+			{#if tableauResult.ok?.holds()}
+				⊢
+			{:else}
+				⊬
+			{/if}
+		</div>
 		<textarea
 			id="conclusion"
 			name="conclusion"
@@ -61,7 +66,7 @@
 </div>
 
 {#if tableauResult.ok !== undefined}
-	<Tableau tableau={tableauResult.ok} {width} {height} />
+	<Tableau tableau={tableauResult.ok} editable={true} {...tableauProps} />
 {:else if 'error' in tableauResult}
 	<div>
 		Error: <pre>{tableauResult.error}</pre>
