@@ -47,7 +47,7 @@ conclusion = "(s && q) > p"
 
 [2.4.6.i]
 premises = "[](A > B) && [](B > C)"
-conclusion = "[]A > C"
+conclusion = "[](A > C)"
 
 [2.4.6.ii]
 conclusion = "<>(A && B) > (<>A && <>B)"
