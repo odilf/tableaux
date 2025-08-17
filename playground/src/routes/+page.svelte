@@ -41,7 +41,7 @@
 
 	<div class="flex-1"></div>
 
-	<div class="font-math mb-4 text-center text-3xl">
+	<div class="font-math mb-4 text-center text-xl">
 		{premises}
 		⊢
 		{conclusion}
@@ -49,12 +49,13 @@
 	<Tableau
 		{tableau}
 		width={570}
+		minLineHeight={30}
 		editable={true}
 		margin={{ top: 12, bottom: 12, left: 0, right: 0 }}
 	/>
 	<p class="text-center text-balance opacity-50">
 		Example: Transitivity across worlds in modal logic. <br />
-		<a href="/http://localhost:5173/example/2/4/6"> Open in playground </a>
+		<a href="/example/2/4/6"> Open in playground </a>
 	</p>
 
 	<div class="flex-1"></div>

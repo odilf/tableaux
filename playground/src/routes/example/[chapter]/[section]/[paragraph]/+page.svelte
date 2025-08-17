@@ -6,10 +6,7 @@
 	import { chapterLogics, displayName } from '$lib/logic.js';
 
 	const { data } = $props();
-	const { section, paragraph, exampleOrExamples } = $derived(data);
-	// NOTE: We do the `?? '1'` because when navigating away from the page the
-	// chapter value is undefined so it parses to NaN.
-	const chapter = $derived(parseInt(data.chapter ?? '1'));
+	const { chapter, section, paragraph, exampleOrExamples } = $derived(data);
 	const width = 574;
 </script>
 

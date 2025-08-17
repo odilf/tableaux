@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Back from '$lib/components/Back.svelte';
 	import { chapterLogics, displayName } from '$lib/logic';
+	import { validateChapter } from '.';
 	import ChapterExamples from './ChapterExamples.svelte';
 	const { data } = $props();
 </script>
@@ -19,13 +20,15 @@
 		</a>.
 	</p>
 
-	{#each Object.entries(data.examples) as [chapter, chapterExamples] (chapter)}
+	<!-- I have no idea why the `?? {}` is necessary, but sometimes when building
+	  for prod it just is undefined and it's like if `+page.server.ts` doesn't run -->
+	{#each Object.entries(data.examples ?? {}) as [chapter, chapterExamples] (chapter)}
 		<h2 class="mt-8 text-2xl font-bold">
 			<a href="/example/{chapter}">
 				Chapter {chapter}: {displayName[chapterLogics[chapter]]} logic
 			</a>
 		</h2>
 
-		<ChapterExamples chapter={parseInt(chapter)} {chapterExamples} />
+		<ChapterExamples chapter={validateChapter(chapter)!} {chapterExamples} />
 	{/each}
 </main>

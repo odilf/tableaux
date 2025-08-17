@@ -10,7 +10,7 @@
 		width,
 		height,
 		editable = false,
-		minLineHeight = 35,
+		minLineHeight = 40,
 		margin = { top: 40, right: 40, bottom: 40, left: 40 }
 	}: {
 		tableau: Tableau;
@@ -34,7 +34,7 @@
 		)
 	);
 
-	const linePadding = 12;
+	const linePadding = { top: 10, bottom: 12 };
 
 	let d3Tree = $derived(
 		d3
@@ -43,13 +43,15 @@
 	);
 </script>
 
-{#snippet tree({ data, x, y, children }: d3.HierarchyPointNode<{ value: Node; id: number }>)}
+{#snippet tree(
+	{ data, x, y, children }: d3.HierarchyPointNode<{ value: Node; id: number }>,
+	yOffset = 0
+)}
 	{@const isDead = tableau.isDead(data.id)}
 	{@const inferCurrent = () => {
 		if (!editable) {
 			return;
 		}
-		console.log('inferring node', data.id);
 		tableau.inferNode(data.id);
 		// Trigger update...
 		// See https://github.com/sveltejs/svelte/issues/14520
@@ -76,7 +78,7 @@
 	{#if children !== undefined}
 		<!-- eslint-disable-next-line svelte/require-each-key -->
 		{#each children as child}
-			{@render tree(child)}
+			{@render tree(child, yOffset)}
 		{/each}
 	{:else if isDead}
 		<text {x} y={y + 20}> ╳ </text>
@@ -91,12 +93,14 @@
 
 		<g stroke="currentColor" stroke-width="1pt" stroke-linecap="round">
 			{#each root.links() as link (link)}
-				<line
-					x1={link.source.x}
-					y1={(link.source.y ?? 0) + linePadding}
-					x2={link.target.x}
-					y2={(link.target.y ?? 0) - linePadding}
-				/>
+				{#if Math.abs((link.source.x ?? 0) - (link.target.x ?? 0)) > 0.01}
+					<line
+						x1={link.source.x}
+						y1={(link.source.y ?? 0) + linePadding.top}
+						x2={link.target.x}
+						y2={(link.target.y ?? 0) - linePadding.bottom}
+					/>
+				{/if}
 			{/each}
 		</g>
 	</g>

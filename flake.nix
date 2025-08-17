@@ -13,6 +13,7 @@
       nixpkgs,
       rust-overlay,
       flake-parts,
+      self,
       ...
     }:
     flake-parts.lib.mkFlake { inherit inputs; } {
@@ -22,6 +23,12 @@
         "x86_64-darwin"
         "aarch64-darwin"
       ];
+
+      flake = {
+        nixosModules.default = import ./nix/module.nix {
+          tableaux-playground = self.packages.x86_64-linux.playground;
+        };
+      };
 
       perSystem =
         { system, ... }:
@@ -34,6 +41,10 @@
         in
         {
           formatter = pkgs.nixfmt-rfc-style;
+          packages = rec {
+            wasm = pkgs.callPackage ./nix/tableaux-wasm.nix { };
+            playground = pkgs.callPackage ./nix/tableaux-playground.nix { tableaux = wasm; };
+          };
           devShells.default = pkgs.mkShell {
             packages = [
               toolchain
@@ -45,6 +56,8 @@
               pkgs.nodejs_22
               pkgs.wasm-pack
             ];
+
+            EXAMPLES_GRAHAM_PRIEST_PATH = ./examples-graham-priest.toml;
           };
         };
     };

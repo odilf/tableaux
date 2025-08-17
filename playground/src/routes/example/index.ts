@@ -1,6 +1,8 @@
+import { chapterLogics } from '$lib/logic';
 import { Logic } from '$rust';
 import TOML from 'smol-toml';
 import * as v from 'valibot';
+import { symbolAsciiStr, symbolChar, symbolIter } from '$rust';
 
 export const singleExampleSchema = v.object({
 	premises: v.optional(v.string()),
@@ -54,9 +56,29 @@ export function logicOfChapter(chapter: number, example: Example) {
 			transitive ?? false,
 			extendable ?? false
 		);
-	} else if (isNaN(chapter)) {
-		throw new Error('Chapter was NaN');
 	} else {
 		throw new Error(`Invalid chapter: ${chapter}`);
 	}
+}
+
+export function validateChapter(chapter: string): number | null {
+	const output = parseInt(chapter);
+	if (isNaN(output)) {
+		return null;
+	}
+
+	if (output < 1 || output > Object.keys(chapterLogics).length) {
+		return null;
+	}
+
+	return output;
+}
+
+export function replaceAsciiWithUnicode(text: string) {
+	for (const symbol of symbolIter()) {
+		console.log('replacing ', symbolAsciiStr(symbol), ' with ', symbolChar(symbol));
+		text = text.replaceAll(symbolAsciiStr(symbol), symbolChar(symbol));
+	}
+
+	return text;
 }

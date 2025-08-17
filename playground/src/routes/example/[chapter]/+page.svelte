@@ -13,5 +13,5 @@
 		Chapter {chapter}: {displayName[chapterLogics[chapter]]} logic
 	</h1>
 
-	<ChapterExamples chapter={parseInt(chapter)} {chapterExamples} />
+	<ChapterExamples {chapter} {chapterExamples} />
 </main>

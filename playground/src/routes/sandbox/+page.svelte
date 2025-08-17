@@ -94,7 +94,7 @@
 	</div>
 
 	<div class="flex-1 p-4">
-		<TableauEdit {logic} premises="p > q, q > r" conclusion="p > r" />
+		<TableauEdit {logic} premises="p > q, q > r" conclusion="p > r" width={1000} />
 	</div>
 </main>
 
