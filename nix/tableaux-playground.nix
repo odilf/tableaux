@@ -1,6 +1,6 @@
 {
   tableaux,
-  nodejs,
+  nodejs_24,
   pnpm_10,
   bash,
   stdenv,
@@ -15,7 +15,7 @@ stdenv.mkDerivation (finalAttrs: {
   };
 
   nativeBuildInputs = [
-    nodejs
+    nodejs_24
     pnpm_10.configHook
   ];
 
@@ -49,7 +49,7 @@ stdenv.mkDerivation (finalAttrs: {
     mkdir -p $out/bin
     echo "\
     #!${bash}/bin/bash
-    ${nodejs}/bin/node $out/playground/build
+    ${nodejs_24}/bin/node $out/playground/build
     " > $out/bin/${finalAttrs.pname}
 
     chmod ugo+x $out/bin/${finalAttrs.pname}
