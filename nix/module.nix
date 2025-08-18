@@ -49,14 +49,6 @@ in
       type = lib.types.str;
       default = "localhost";
     };
-
-    origin = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      example = "https://my.site";
-      default = null;
-    };
-
-    node-package = lib.mkPackageOption pkgs "node" { };
   };
 
   config.systemd.services.tableaux-playground = lib.mkIf cfg.enable {
@@ -65,16 +57,15 @@ in
     wantedBy = [ "multi-user.target" ];
 
     serviceConfig = commonServiceConfig // {
-      ExecStart = "${pkgs.nodejs}/bin/node ${tableaux-playground}/playground/build";
+      ExecStart = "${pkgs.static-web-server}/bin/static-web-server --root ${tableaux-playground}/playground/build";
       StateDirectory = "tableaux";
       SyslogIdentifier = "tableaux";
       RuntimeDirectory = "tableaux";
     };
 
     environment = {
-      "PORT" = "${toString cfg.port}";
-      "HOST" = cfg.host;
-      "ORIGIN" = lib.mkIf (cfg.origin != null) cfg.origin;
+      "SERVER_PORT" = "${toString cfg.port}";
+      "SERVER_HOST" = cfg.host;
     };
   };
 }

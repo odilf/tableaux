@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { is } from 'valibot';
-	import { singleExampleSchema, type Example, type Examples } from '.';
+	import { singleExampleSchema, type Example, type Examples } from '$lib/examples';
 
 	const { chapter, chapterExamples }: { chapter: number; chapterExamples: Examples[string] } =
 		$props();

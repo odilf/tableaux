@@ -1,15 +1,21 @@
-import { error } from '@sveltejs/kit';
-import { validateChapter } from '../../..';
-import { examples } from '../../../index.server';
+export const prerender = true;
 
-export const entries = () =>
-	Object.entries(examples).flatMap(([chapter, chapterExamples]) =>
+import { error } from '@sveltejs/kit';
+
+export const entries = async () => {
+	const { examples } = await import('$lib/examples/index.server');
+
+	return Object.entries(examples).flatMap(([chapter, chapterExamples]) =>
 		Object.entries(chapterExamples).flatMap(([section, sectionExamples]) =>
 			Object.keys(sectionExamples).map((paragraph) => ({ chapter, section, paragraph }))
 		)
 	);
+};
 
 export const load = async ({ params }) => {
+	const { validateChapter } = await import('$lib/examples');
+	const { examples } = await import('$lib/examples/index.server');
+
 	const { section, paragraph } = params;
 	const chapter = validateChapter(params.chapter) ?? error(400, 'Invalid chapter');
 

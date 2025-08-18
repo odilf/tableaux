@@ -1,7 +1,7 @@
 <script lang="ts">
 	import TableauEdit from '$lib/TableauEdit.svelte';
 	import { is } from 'valibot';
-	import { logicOfChapter, singleExampleSchema } from '../../../index.js';
+	import { logicOfChapter, singleExampleSchema } from '$lib/examples';
 	import Back from '$lib/components/Back.svelte';
 	import { chapterLogics, displayName } from '$lib/logic.js';
 

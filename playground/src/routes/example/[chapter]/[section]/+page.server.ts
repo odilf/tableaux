@@ -1,6 +1,9 @@
+export const prerender = true;
+
 import { error, redirect } from '@sveltejs/kit';
-import { validateChapter } from '../../index';
-import { examples } from '../../index.server';
+
+const { validateChapter } = await import('$lib/examples');
+const { examples } = await import('$lib/examples/index.server');
 
 export const entries = () =>
 	Object.entries(examples).flatMap(([chapter, chapterExamples]) =>

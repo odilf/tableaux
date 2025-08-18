@@ -2,7 +2,7 @@
   tableaux,
   nodejs_24,
   pnpm_10,
-  bash,
+
   stdenv,
 }:
 stdenv.mkDerivation (finalAttrs: {
@@ -45,14 +45,6 @@ stdenv.mkDerivation (finalAttrs: {
 
     cp -r node_modules package.json $out/playground/
     cp -r ${tableaux}/pkg $out/
-
-    mkdir -p $out/bin
-    echo "\
-    #!${bash}/bin/bash
-    ${nodejs_24}/bin/node $out/playground/build
-    " > $out/bin/${finalAttrs.pname}
-
-    chmod ugo+x $out/bin/${finalAttrs.pname}
 
     runHook postInstall
   '';
