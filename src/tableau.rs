@@ -13,7 +13,7 @@ pub struct PartialTableau<L: Logic> {
     uninferred_nodes: BinaryHeap<NodeIdPriority>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TableauNode<V> {
     pub(crate) value: V,
     parent: Option<NodeId>,
@@ -105,7 +105,10 @@ impl<L: Logic> Tableau<L> {
     }
 }
 
-impl<L: Logic> PartialTableau<L> {
+impl<L: Logic> PartialTableau<L>
+where
+    L::Node: Eq,
+{
     /// Carries out the entire inference process and returns a completed
     /// tableau.
     pub fn infer(mut self) -> Tableau<L> {
@@ -134,51 +137,42 @@ impl<L: Logic> PartialTableau<L> {
             use crate::logic::InferenceRule as IR;
             match self.logic.infer(&self.get(node).value, branch) {
                 IR::None => (),
-                IR::Single(p) => {
-                    let new_node = self.add_orphan(p.clone());
-                    self.bind_child(leaf, new_node);
-                    self.check_branch_liveness(new_node);
+                IR::Single(node) => {
+                    if let Some(new_node) = self.add_child(leaf, node) {
+                        self.check_branch_liveness(new_node);
+                    }
                 }
                 IR::Split([left, right]) => {
-                    let new_left = self.add_orphan(left.clone());
-                    self.bind_child(leaf, new_left);
+                    if let Some(new_left) = self.add_child(leaf, left) {
+                        self.check_branch_liveness(new_left);
+                    }
 
-                    let new_right = self.add_orphan(right.clone());
-                    self.bind_child(leaf, new_right);
-
-                    self.check_branch_liveness(new_left);
-                    self.check_branch_liveness(new_right);
+                    if let Some(new_right) = self.add_child(leaf, right) {
+                        self.check_branch_liveness(new_right);
+                    }
                 }
-                IR::Chain(ps) => {
-                    if ps.is_empty() {
-                        ()
-                    } else {
-                        let new_nodes = ps
-                            .iter()
-                            .map(|p| self.add_orphan(p.clone()))
-                            .collect::<Vec<_>>();
-
-                        self.bind_child(leaf, new_nodes[0]);
-                        self.check_branch_liveness(new_nodes[0]);
-
-                        for i in 1..new_nodes.len() {
-                            self.bind_child(new_nodes[i - 1], new_nodes[i]);
-                            let died = self.check_branch_liveness(new_nodes[i]);
+                IR::Chain(nodes) => {
+                    let mut leaf = leaf;
+                    for node in nodes {
+                        if let Some(new_node) = self.add_child(leaf, node) {
+                            let died = self.check_branch_liveness(new_node);
                             if died {
                                 break;
                             }
+
+                            leaf = new_node;
                         }
                     }
                 }
                 IR::SplitAndChain(chains) => {
-                    for [a, b] in &chains {
-                        let new_a = self.add_orphan(a.clone());
-                        self.bind_child(leaf, new_a);
-                        let died = self.check_branch_liveness(new_a);
-                        if !died {
-                            let new_b = self.add_orphan(b.clone());
-                            self.bind_child(new_a, new_b);
-                            self.check_branch_liveness(new_b);
+                    for [a, b] in chains {
+                        if let Some(new_a) = self.add_child(leaf, a) {
+                            let died = self.check_branch_liveness(new_a);
+                            if !died {
+                                if let Some(new_b) = self.add_child(new_a, b) {
+                                    self.check_branch_liveness(new_b);
+                                }
+                            }
                         }
                     }
                 }
@@ -332,9 +326,17 @@ impl<L: Logic> PartialTableau<L> {
         parent.live_children += 1;
     }
 
-    pub fn add_child(&mut self, parent: NodeId, child: L::Node) {
+    pub fn add_child(&mut self, parent: NodeId, child: L::Node) -> Option<NodeId>
+    where
+        L::Node: Eq,
+    {
+        if self.branch(parent).contains(&child) {
+            return None;
+        }
+
         let child_id = self.add_orphan(child);
         self.bind_child(parent, child_id);
+        return Some(child_id);
     }
 
     pub fn branch(&self, leaf: NodeId) -> impl Branch<L> {
@@ -354,6 +356,7 @@ impl<L: Logic> PartialTableau<L> {
                 continue;
             }
 
+            // Add if leaf, enqueue rest otherwise
             let children = &self.get(node_id).children;
             if children.is_empty() {
                 output.push(node_id);
