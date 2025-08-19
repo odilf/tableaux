@@ -57,7 +57,7 @@
               pkgs.wasm-pack
             ];
 
-            EXAMPLES_GRAHAM_PRIEST_PATH = ./examples-graham-priest.toml;
+            EXAMPLES_GRAHAM_PRIEST_PATH = "../examples-graham-priest.toml";
           };
         };
     };

@@ -139,7 +139,7 @@ holds = false
 
 [3.3.3]
 conclusion = "[]p > p"
-kind = { relfexive = true }
+kind = { reflexive = true }
 
 [3.3.4]
 conclusion = "p > []<>p"
