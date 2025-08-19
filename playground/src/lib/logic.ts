@@ -16,7 +16,7 @@ export const displayName = {
 } satisfies Record<LogicKind, string>;
 
 export const chapterLogics: Record<string, LogicKind> = {
-	'1': 'classical',
-	'2': 'modal',
-	'3': 'normalModal'
+	1: 'classical',
+	2: 'modal',
+	3: 'normalModal'
 };

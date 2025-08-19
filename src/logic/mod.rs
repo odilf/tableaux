@@ -1,4 +1,6 @@
 mod impls;
+use std::borrow::Cow;
+
 pub use impls::*;
 
 mod dynamic;
@@ -12,6 +14,8 @@ pub use dynamic::*;
 pub trait Logic {
     type Node: Clone;
     type Expr;
+
+    fn symbol(&self) -> Cow<'static, str>;
 
     fn infer(&self, node: &Self::Node, branch: impl Branch<Self>) -> InferenceRule<Self::Node>
     where

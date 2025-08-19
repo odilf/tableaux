@@ -5,7 +5,7 @@ use crate::{
 
 use super::InferenceRule;
 
-use std::fmt;
+use std::{borrow::Cow, fmt};
 
 make_dyn_logic![
     Classical, classical::Classical, "Classical";
@@ -47,6 +47,14 @@ macro_rules! make_dyn_logic {
         impl Logic for DynLogic {
             type Expr = DynExpr;
             type Node = DynNode;
+
+            fn symbol(&self) -> Cow<'static, str> {
+                match self {
+                    $(
+                        DynLogic::$name(logic) => logic.symbol(),
+                    )*
+                }
+            }
 
             fn infer(&self, node: &Self::Node, branch: impl Branch<Self>) -> InferenceRule<Self::Node> {
                 match self {
@@ -146,7 +154,7 @@ mod wasm {
     use crate::{
         PartialTableau,
         logic::{
-            DynExpr, DynLogic, DynNode, classical::Classical, modal::Modal,
+            DynExpr, DynLogic, DynNode, Logic, classical::Classical, modal::Modal,
             normal_modal::NormalModal,
         },
         tableau::NodeId,
@@ -171,6 +179,10 @@ mod wasm {
 
     #[wasm_bindgen(js_class = Logic)]
     impl DynLogicWasm {
+        pub fn symbol(&self) -> String {
+            self.logic.symbol().to_string()
+        }
+
         fn parse_expr(&self, expr: &str) -> Result<DynExpr, String> {
             Ok(match self.logic {
                 DynLogic::Classical(_) => DynExpr::Classical(expr.parse()?),

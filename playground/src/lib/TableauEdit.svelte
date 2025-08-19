@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Logic } from '$rust';
+	import Concludes from './Concludes.svelte';
 	import Tableau from './Tableau.svelte';
 	import type { ComponentProps } from 'svelte';
 
@@ -48,11 +49,7 @@
 		>
 		</textarea>
 		<div class="font-bold">
-			{#if tableauResult.ok?.holds()}
-				⊢
-			{:else}
-				⊬
-			{/if}
+			<Concludes holds={tableauResult.ok?.holds()} {logic} />
 		</div>
 		<textarea
 			id="conclusion"
