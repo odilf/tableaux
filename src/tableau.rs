@@ -384,7 +384,7 @@ impl<V> TableauNode<V> {
 pub trait Branch<L: Logic> {
     fn leaf(&self) -> &L::Node;
 
-    /// Iterator over ancestors of the branch.
+    /// Iterator over all nodes in this branch, including the leaf.
     fn ancestors<'t>(&'t self) -> impl Iterator<Item = &'t L::Node>
     where
         L::Node: 't;
@@ -432,10 +432,10 @@ impl<'t, L: Logic> Branch<L> for SimpleBranch<'t, L> {
     where
         L::Node: 'a,
     {
-        AncestorIter {
+        std::iter::once(self.leaf()).chain(AncestorIter {
             tableau: self.tableau,
             current: self.leaf,
-        }
+        })
     }
 }
 
@@ -448,9 +448,8 @@ impl<'t, L: Logic> Iterator for AncestorIter<'t, L> {
     type Item = &'t L::Node;
     fn next(&mut self) -> Option<Self::Item> {
         let parent = self.tableau.get(self.current).parent?;
-        let current = self.current;
         self.current = parent;
-        Some(&self.tableau.get(current).value)
+        Some(&self.tableau.get(self.current).value)
     }
 }
 
