@@ -10,7 +10,7 @@ use crate::{
 use wasm_bindgen::prelude::*;
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Modal {}
 
 pub fn infer(input: &str) -> Tableau<Modal> {

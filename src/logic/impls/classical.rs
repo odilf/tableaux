@@ -11,7 +11,7 @@ use crate::{Logic, PartialTableau};
 use wasm_bindgen::prelude::*;
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Classical {}
 
 pub fn infer(input: &str) -> Tableau<Classical> {
@@ -110,7 +110,7 @@ impl Classical {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     // TODO: Use some kind of small string type
     Const(Box<str>),

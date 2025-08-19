@@ -23,21 +23,21 @@ macro_rules! make_dyn_logic {
         /// - [Classical logic](classical::Classical)
         /// - [Modal logic](modal::Modal)
         /// - [Normal modal logic](normal_modal::NormalModal)
-        #[derive(Debug, Clone)]
+        #[derive(Debug, Clone, PartialEq, Eq)]
         pub enum DynLogic {
             $(
                 $name($logic)
             ),*
         }
 
-        #[derive(Debug, Clone)]
+        #[derive(Debug, Clone, PartialEq, Eq)]
         pub enum DynExpr {
             $(
                 $name(<$logic as Logic>::Expr)
             ),*
         }
 
-        #[derive(Debug, Clone)]
+        #[derive(Debug, Clone, PartialEq, Eq)]
         pub enum DynNode {
             $(
                 $name(<$logic as Logic>::Node)
@@ -161,17 +161,20 @@ mod wasm {
     };
     use wasm_bindgen::prelude::*;
 
+    #[derive(Debug, Clone, PartialEq, Eq)]
     #[wasm_bindgen(js_name = Logic)]
     pub struct DynLogicWasm {
         logic: DynLogic,
     }
 
+    #[derive(Debug, Clone, PartialEq, Eq)]
     #[wasm_bindgen(js_name = Node)]
     #[repr(transparent)]
     pub struct DynNodeWasm {
         node: DynNode,
     }
 
+    #[derive(Debug, Clone)]
     #[wasm_bindgen(js_name = Tableau)]
     pub struct DynPartialTableau {
         tableau: PartialTableau<DynLogic>,

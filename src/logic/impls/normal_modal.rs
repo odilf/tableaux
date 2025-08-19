@@ -146,9 +146,6 @@ impl Logic for NormalModal {
                                 _ => None,
                             })
                             .map(|i| Node::Relation { from: *i, to: *k })
-                            // Don't add if already on branch
-                            // TODO: Is this redundant?
-                            .filter(|t| !branch.contains(t))
                     })
                     .into_iter()
                     .flatten();
@@ -245,6 +242,10 @@ impl Logic for NormalModal {
                 }
             }
         }
+    }
+
+    fn priority(&self, node: &Self::Node) -> u16 {
+        Modal {}.priority(node)
     }
 }
 
