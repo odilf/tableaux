@@ -60,7 +60,7 @@ impl Logic for NormalModal {
                     Expr::Const(_) => IR::none(),
                     Expr::Not(p) => match p.as_ref() {
                         Expr::Const(_) => IR::none(),
-                        Expr::Not(_) => IR::single(*p.clone()),
+                        Expr::Not(p) => IR::single(*p.clone()),
                         Expr::And(p, q) => IR::split(p.not(), q.not()),
                         Expr::Or(p, q) => IR::chain(vec![p.not(), q.not()]),
                         Expr::MatImpl(p, q) => IR::chain(vec![*p.clone(), q.not()]),
