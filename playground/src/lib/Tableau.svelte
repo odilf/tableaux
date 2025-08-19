@@ -10,6 +10,7 @@
 		margin = { top: 20, right: 20, bottom: 20, left: 20 },
 		crossOffset = 20,
 		minLineHeight = 20,
+		minExprWidth = 4,
 		splitHeight = 35,
 		linePadding = { top: 12, bottom: 14 }
 	}: {
@@ -20,8 +21,10 @@
 		margin?: { top: number; right: number; bottom: number; left: number };
 		/** How much space between the leaf nodes and the crosses if they're dead */
 		crossOffset?: number;
-		/** Minimum line height for line + split, in case `height` is undefined or too small */
+		/** Minimum line height for line, in case `height` is undefined or too small */
 		minLineHeight?: number;
+		/** Minimum width for an expression, in case `width` is undefined or too small */
+		minExprWidth?: number;
 		splitHeight?: number;
 		/**
 		 * How much extra space to leave between the top and bottom of lines that connect node.
@@ -50,6 +53,15 @@
 		return Math.max(heightOf(tableau.root()) + margin.top + margin.bottom, height ?? 0);
 	});
 
+	const d3Width = $derived.by(() => {
+		const minFractionOf = (node: number): number => {
+			const children = Array.from(tableau.children(node));
+			return d3.min(children.map((child) => minFractionOf(child) / children.length)) ?? 1;
+		};
+
+		return Math.max(width, (1 / minFractionOf(tableau.root())) * minExprWidth);
+	});
+
 	let d3root = $derived(
 		d3.hierarchy({ value: tableau.get(tableau.root()), id: tableau.root() }, (node) =>
 			Array.from(tableau.children(node.id)).map((child) => ({
@@ -62,7 +74,7 @@
 	let d3Tree = $derived(
 		d3
 			.tree<{ value: Node; id: number }>()
-			.size([width - margin.left - margin.right, d3Height - margin.top - margin.bottom])(d3root)
+			.size([d3Width - margin.left - margin.right, d3Height - margin.top - margin.bottom])(d3root)
 	);
 </script>
 
@@ -120,7 +132,7 @@
 	{/if}
 {/snippet}
 
-<svg viewBox="0 0 {width} {actualHeight}" class="font-math w-full">
+<svg viewBox="0 0 {d3Width} {actualHeight}" class="font-math w-full">
 	<g transform="translate({margin.left}, {margin.top})" fill="currentColor">
 		<g text-anchor="middle" dominant-baseline="middle">
 			{@render tree(d3Tree)}
