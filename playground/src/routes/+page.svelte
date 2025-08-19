@@ -1,4 +1,5 @@
 <script>
+	import Concludes from '$lib/Concludes.svelte';
 	import Tableau from '$lib/Tableau.svelte';
 	import { Logic } from '$rust';
 
@@ -43,7 +44,7 @@
 
 	<div class="font-math mb-4 text-center text-xl">
 		{premises}
-		⊢
+		<Concludes holds={true} />
 		{conclusion}
 	</div>
 	<Tableau

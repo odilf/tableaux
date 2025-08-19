@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fmt;
 use std::str::FromStr;
 
@@ -20,6 +21,10 @@ pub fn infer(input: &str) -> Tableau<Classical> {
 impl Logic for Classical {
     type Node = Expr;
     type Expr = Expr;
+
+    fn symbol(&self) -> Cow<'static, str> {
+        Cow::Borrowed("")
+    }
 
     fn infer(&self, node: &Expr, _branch: impl Branch<Self>) -> InferenceRule<Self::Node> {
         use InferenceRule as IR;

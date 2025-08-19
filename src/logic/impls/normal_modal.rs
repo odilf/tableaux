@@ -1,4 +1,4 @@
-use std::{cmp, collections::HashSet};
+use std::{borrow::Cow, cmp, collections::HashSet};
 
 use crate::{
     Logic, PartialTableau,
@@ -29,6 +29,25 @@ pub struct NormalModal {
 impl Logic for NormalModal {
     type Node = Node;
     type Expr = Expr;
+
+    fn symbol(&self) -> Cow<'static, str> {
+        let mut output = String::with_capacity(5);
+        output.push('K');
+        if self.reflexive {
+            output.push('ρ')
+        }
+        if self.symmetric {
+            output.push('σ')
+        }
+        if self.transitive {
+            output.push('τ')
+        }
+        if self.extendable {
+            output.push('η')
+        }
+
+        Cow::Owned(output)
+    }
 
     fn infer(&self, node: &Self::Node, branch: impl Branch<Self>) -> InferenceRule<Self::Node> {
         use InferenceRule as IR;

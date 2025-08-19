@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { is } from 'valibot';
-	import { singleExampleSchema, type Example, type Examples } from '$lib/examples';
+	import { logicOfChapter, singleExampleSchema, type Example, type Examples } from '$lib/examples';
+	import Concludes from '$lib/Concludes.svelte';
+	import { chapterLogics } from '$lib/logic';
 
 	const { chapter, chapterExamples }: { chapter: number; chapterExamples: Examples[string] } =
 		$props();
@@ -25,7 +27,9 @@
 
 		<span>
 			{example.premises}
-			<span class="font-bold">{example.holds === false ? '⊬' : '⊢'}</span>
+			<span class="font-bold">
+				<Concludes holds={example.holds ?? true} logic={logicOfChapter(chapter, example)} />
+			</span>
 			{example.conclusion}
 		</span>
 	</a>
@@ -47,7 +51,12 @@
 							</span>
 							<span>
 								{example.premises}
-								<span class="font-bold">{example.holds === false ? '⊬' : '⊢'}</span>
+								<span class="font-bold">
+									<Concludes
+										holds={example.holds ?? true}
+										logic={logicOfChapter(chapter, example)}
+									/>
+								</span>
 								{example.conclusion}
 							</span>
 						</a>

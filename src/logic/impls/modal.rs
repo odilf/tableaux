@@ -1,4 +1,4 @@
-use std::{fmt, ops::Deref, str::FromStr};
+use std::{borrow::Cow, fmt, ops::Deref, str::FromStr};
 
 use crate::{
     Logic, PartialTableau,
@@ -20,6 +20,10 @@ pub fn infer(input: &str) -> Tableau<Modal> {
 impl Logic for Modal {
     type Node = Node;
     type Expr = Expr;
+
+    fn symbol(&self) -> Cow<'static, str> {
+        Cow::Borrowed("K")
+    }
 
     fn infer(&self, node: &Self::Node, branch: impl Branch<Self>) -> InferenceRule<Self::Node> {
         use InferenceRule as IR;
