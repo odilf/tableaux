@@ -32,8 +32,6 @@
 				{width}
 				{logic}
 			/>
-
-			<div>Should hold: {exampleOrExamples.holds ?? 'true'}</div>
 		</div>
 	{:else}
 		{#each Object.entries(exampleOrExamples) as [key, example] (key)}
@@ -46,8 +44,6 @@
 					{width}
 					{logic}
 				/>
-
-				<div>Should hold: {example.holds ?? 'true'}</div>
 			</div>
 		{/each}
 	{/if}

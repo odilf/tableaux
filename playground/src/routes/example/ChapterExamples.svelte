@@ -2,7 +2,6 @@
 	import { is } from 'valibot';
 	import { logicOfChapter, singleExampleSchema, type Example, type Examples } from '$lib/examples';
 	import Concludes from '$lib/Concludes.svelte';
-	import { chapterLogics } from '$lib/logic';
 
 	const { chapter, chapterExamples }: { chapter: number; chapterExamples: Examples[string] } =
 		$props();
