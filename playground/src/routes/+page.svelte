@@ -50,7 +50,7 @@
 	<Tableau
 		{tableau}
 		width={570}
-		minLineHeight={30}
+		minLineHeight={22}
 		editable={true}
 		margin={{ top: 12, bottom: 12, left: 0, right: 0 }}
 	/>
