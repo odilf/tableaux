@@ -42,22 +42,30 @@
 
 	<div class="flex-1"></div>
 
-	<div class="font-math mb-4 text-center text-xl">
-		{premises}
-		<Concludes holds={true} />
-		{conclusion}
+	<div class="flex">
+		<figure class="flex-1">
+			<Tableau
+				{tableau}
+				width={570}
+				minLineHeight={22}
+				editable={true}
+				margin={{ top: 12, bottom: 12, left: 0, right: 0 }}
+			/>
+			<figcaption class="text-center text-balance opacity-50">
+				Example:
+				<span class="font-math text-center text-xl">
+					{premises.join(', ')}
+					<Concludes holds={true} />
+					{conclusion}
+				</span>
+
+				i.e., transitivity across worlds in modal logic<br />
+				<a href="/sandbox/?statement=□(A ⊃ B), □(B ⊃ C) ⊢ □(A ⊃ C)&logic=modal">
+					Open in sandbox
+				</a>
+			</figcaption>
+		</figure>
 	</div>
-	<Tableau
-		{tableau}
-		width={570}
-		minLineHeight={22}
-		editable={true}
-		margin={{ top: 12, bottom: 12, left: 0, right: 0 }}
-	/>
-	<p class="text-center text-balance opacity-50">
-		Example: Transitivity across worlds in modal logic. <br />
-		<a href="/example/2/4/6"> Open in playground </a>
-	</p>
 
 	<div class="flex-1"></div>
 </main>

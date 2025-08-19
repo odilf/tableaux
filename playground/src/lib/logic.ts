@@ -2,6 +2,13 @@ import { Classical, Modal, NormalModal } from '$rust';
 
 export const logics = ['classical', 'modal', 'normalModal'] as const;
 export type LogicKind = (typeof logics)[number];
+export const asLogicKind = (value: string): LogicKind => {
+	if (logics.includes(value as LogicKind)) {
+		return value as LogicKind;
+	} else {
+		throw new Error('Invalid logic');
+	}
+};
 
 export const classObject = {
 	classical: Classical,

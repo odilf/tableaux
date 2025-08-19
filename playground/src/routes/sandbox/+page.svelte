@@ -1,11 +1,18 @@
 <script lang="ts">
-	import { classObject, displayName, logics, type LogicKind } from '$lib/logic';
+	import { asLogicKind, classObject, displayName, logics, type LogicKind } from '$lib/logic';
 	import TableauEdit from '$lib/TableauEdit.svelte';
 	import { Logic, symbolAsciiStr, symbolChar, symbolName } from '$rust';
 	import { expoOut } from 'svelte/easing';
 	import { fly, slide } from 'svelte/transition';
+	import { queryParameters } from 'sveltekit-search-params';
 
-	let selected: LogicKind = $state('classical');
+	const params = queryParameters({
+		statement: true,
+		logic: true
+	});
+
+	let selected: LogicKind = $state(asLogicKind(params.logic ?? 'classical'));
+	let [premises, conclusion] = $state(params.statement?.split('⊢') ?? ['', '']);
 
 	let reflexive = $state(false);
 	let symmetric = $state(false);
@@ -22,6 +29,11 @@
 		} else {
 			throw new Error('Unreachable');
 		}
+	});
+
+	$effect(() => {
+		params.statement = `${premises} ⊢ ${conclusion}`;
+		params.logic = selected;
 	});
 </script>
 
@@ -94,7 +106,7 @@
 	</div>
 
 	<div class="flex-1 p-4">
-		<TableauEdit {logic} premises="p > q, q > r" conclusion="p > r" width={1000} />
+		<TableauEdit {logic} bind:premises bind:conclusion width={1000} />
 	</div>
 </main>
 
