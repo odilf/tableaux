@@ -6,21 +6,26 @@
 
 	type Props = {
 		logic: Logic;
-		premises: string;
+		premises: string[];
 		conclusion: string;
 	} & Omit<ComponentProps<typeof Tableau>, 'tableau' | 'editable'>;
 
 	let {
 		logic,
-		premises = $bindable(''),
-		conclusion = $bindable(''),
+		premises = $bindable(),
+		conclusion = $bindable(),
 		...tableauProps
 	}: Props = $props();
+
+	let premisesWithCommas = $state(premises.join(', '));
+	$effect(() => {
+		premises = premisesWithCommas.split(',').map((p) => p.trim());
+	});
 
 	let tableauResult = $derived.by(() => {
 		try {
 			const t = logic.tableau(
-				premises.split(',').filter((p) => p.trim().length > 0),
+				premises.filter((p) => p.trim().length > 0),
 				conclusion
 			);
 			t.infer();
@@ -45,7 +50,7 @@
 			name="premises"
 			rows="1"
 			class="w-full rounded border text-center"
-			bind:value={premises}
+			bind:value={premisesWithCommas}
 		>
 		</textarea>
 		<div class="font-bold">

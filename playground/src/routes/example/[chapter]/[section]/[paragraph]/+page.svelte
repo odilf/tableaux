@@ -27,7 +27,7 @@
 		{@const logic = logicOfChapter(chapter, exampleOrExamples)}
 		<div class="h-full">
 			<TableauEdit
-				premises={exampleOrExamples.premises ?? ''}
+				premises={exampleOrExamples.premises?.split(',') ?? []}
 				conclusion={exampleOrExamples.conclusion}
 				{width}
 				{logic}
@@ -39,7 +39,7 @@
 			<div id={key} class="scroll-mt-6">
 				<h2 class="text-2xl font-bold italic">({key})</h2>
 				<TableauEdit
-					premises={example.premises ?? ''}
+					premises={example.premises?.split(',') ?? []}
 					conclusion={example.conclusion}
 					{width}
 					{logic}

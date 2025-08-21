@@ -6,13 +6,23 @@
 	import { fly, slide } from 'svelte/transition';
 	import { queryParameters } from 'sveltekit-search-params';
 
-	const params = queryParameters({
-		statement: true,
-		logic: true
-	});
+	const params = queryParameters(
+		{
+			statement: true,
+			logic: true
+		},
+		{
+			pushHistory: false
+		}
+	);
 
 	let selected: LogicKind = $state(asLogicKind(params.logic ?? 'classical'));
-	let [premises, conclusion] = $state(params.statement?.split('⊢') ?? ['', '']);
+	let [premises, conclusion] = $state(
+		(() => {
+			const [premises, conclusion] = params.statement?.split('⊢') ?? ['p > q,q > r', 'p > r'];
+			return [premises.split(','), conclusion];
+		})()
+	);
 
 	let reflexive = $state(false);
 	let symmetric = $state(false);
@@ -32,7 +42,7 @@
 	});
 
 	$effect(() => {
-		params.statement = `${premises} ⊢ ${conclusion}`;
+		params.statement = `${premises.join(',')}⊢${conclusion}`;
 		params.logic = selected;
 	});
 </script>

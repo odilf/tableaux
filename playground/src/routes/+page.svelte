@@ -4,7 +4,11 @@
 	import { Logic } from '$rust';
 
 	const links = [
-		{ name: 'Sandbox', href: '/sandbox', description: "Edit to your heart's content." },
+		{
+			name: 'Sandbox',
+			href: '/sandbox?logic=classical&statement=p+>+q%2C+q+>+r⊢p+>+r',
+			description: "Edit to your heart's content."
+		},
 		{
 			name: 'Examples',
 			href: '/example',
