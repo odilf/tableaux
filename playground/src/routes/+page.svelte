@@ -65,7 +65,7 @@
 
 				i.e., transitivity across worlds in modal logic<br />
 				<a href="/sandbox/?statement=□(A ⊃ B), □(B ⊃ C) ⊢ □(A ⊃ C)&logic=modal">
-					Open in sandbox
+					⊢ Open in sandbox
 				</a>
 			</figcaption>
 		</figure>
