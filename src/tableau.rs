@@ -367,6 +367,32 @@ impl<L: Logic> PartialTableau<L> {
 
         output
     }
+
+    /// "maps" a tableau into another kind of logic. This should be used
+    /// sparringly: it contstruct a new tableau, does a bunch of allocations,
+    /// and is all-around kind of ugly.
+    pub(crate) fn map<L2: Logic>(
+        &self,
+        map_logic: impl FnOnce(&L) -> L2,
+        mut map_node: impl FnMut(&L::Node) -> L2::Node,
+    ) -> PartialTableau<L2> {
+        PartialTableau {
+            logic: map_logic(&self.logic),
+            nodes: self
+                .nodes
+                .iter()
+                .map(|node| TableauNode {
+                    value: map_node(&node.value),
+                    parent: node.parent,
+                    children: node.children.clone(),
+                    live_children: node.live_children,
+                    death_reason: node.death_reason,
+                })
+                .collect(),
+            root: self.root,
+            uninferred_nodes: self.uninferred_nodes.clone(),
+        }
+    }
 }
 
 impl<L: Logic> Tableau<L> {

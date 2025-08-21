@@ -1,4 +1,5 @@
 use crate::{
+    PartialTableau,
     logic::{Logic, classical, modal, normal_modal},
     tableau::Branch,
 };
@@ -117,6 +118,21 @@ macro_rules! make_dyn_logic {
                             DynNode::$name(node) => node,
                             _ => unreachable!(),
                         }),
+                    )*
+                }
+            }
+
+            fn initialize(tableau: &mut PartialTableau<Self>) {
+                match tableau.logic {
+                    $(
+                        DynLogic::$name(logic) => {
+                            let mut local_tableau = tableau.map(|_| logic, |node| match node {
+                                DynNode::$name(node) => node.clone(),
+                                _ => unreachable!(),
+                            });
+                            <$logic>::initialize(&mut local_tableau);
+                            *tableau = local_tableau.map(|logic| DynLogic::$name(*logic), |node| DynNode::$name(node.clone()))
+                        }
                     )*
                 }
             }
