@@ -2,7 +2,8 @@
   tableaux,
   nodejs_24,
   pnpm_10,
-
+  pnpmConfigHook,
+  fetchPnpmDeps,
   stdenv,
 }:
 stdenv.mkDerivation (finalAttrs: {
@@ -16,15 +17,17 @@ stdenv.mkDerivation (finalAttrs: {
 
   nativeBuildInputs = [
     nodejs_24
-    pnpm_10.configHook
+    pnpm_10
+    (pnpmConfigHook.override { pnpm = pnpm_10; })
   ];
 
   EXAMPLES_GRAHAM_PRIEST_PATH = ../examples-graham-priest.toml;
 
-  pnpmDeps = pnpm_10.fetchDeps {
+  pnpmDeps = fetchPnpmDeps {
     inherit (finalAttrs) pname version src;
-    hash = "sha256-31lywE9xjGi5v73wPTyX1ou5j53gRoTRo72YG90P8fs=";
-    fetcherVersion = 2;
+    pnpm = pnpm_10;
+    fetcherVersion = 3;
+    hash = "sha256-seZLGBVUy6815/M2HRyYJ/BCK1sBucAuZpIPASzjDfY=";
   };
 
   installPhase = ''
